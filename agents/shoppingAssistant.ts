@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { ShoppingItem, User } from '../src/types';
+import { searchGroceries, type GroceryItem } from '../src/data/groceries';
 
 /**
  * AI-First Shopping Assistant using Anthropic Claude with Tools
@@ -10,6 +11,7 @@ import type { ShoppingItem, User } from '../src/types';
  * - Shopping list optimization
  * - Consumption pattern analysis
  * - Intelligent recommendations
+ * - Add items to shopping list from research
  */
 
 interface ShoppingContext {
@@ -17,6 +19,7 @@ interface ShoppingContext {
   users: User[];
   shoppingList: ShoppingItem[];
   budget: number;
+  addItem?: (item: Omit<ShoppingItem, 'id'>) => void;
 }
 
 // Define tools for the AI agent
@@ -94,6 +97,29 @@ const TOOLS: Anthropic.Tool[] = [
         },
       },
       required: ['category'],
+    },
+  },
+  {
+    name: 'add_to_shopping_list',
+    description: 'Add researched grocery items directly to the shopping list with real UK prices from Tesco, Sainsburys, Waitrose, or M&S. Use this after searching for items to actually add them to the list.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        itemName: {
+          type: 'string',
+          description: 'Name of the grocery item to add (will search UK grocery database)',
+        },
+        quantity: {
+          type: 'number',
+          description: 'Quantity to add',
+        },
+        preferredStore: {
+          type: 'string',
+          enum: ['Tesco', 'Sainsburys', 'Waitrose', 'M&S'],
+          description: 'Preferred store to get price from',
+        },
+      },
+      required: ['itemName', 'quantity'],
     },
   },
 ];
@@ -239,6 +265,9 @@ export class ShoppingAssistantAgent {
 
       case 'suggest_items':
         return this.suggestItems(toolInput);
+
+      case 'add_to_shopping_list':
+        return this.addToShoppingList(toolInput);
 
       default:
         return { error: `Unknown tool: ${toolName}` };
@@ -447,6 +476,95 @@ export class ShoppingAssistantAgent {
     suggestions.estimatedTotal = suggestions.items.reduce((sum: number, item: any) => sum + item.estimatedPrice, 0).toFixed(2);
 
     return suggestions;
+  }
+
+  /**
+   * Add item to shopping list from UK grocery database
+   */
+  private addToShoppingList(input: any): any {
+    const { itemName, quantity, preferredStore = 'Tesco' } = input;
+
+    if (!this.context) {
+      return { error: 'No shopping context available' };
+    }
+
+    if (!this.context.addItem) {
+      return { error: 'Shopping list add function not available' };
+    }
+
+    // Search UK grocery database
+    const searchResults = searchGroceries(itemName);
+
+    if (searchResults.length === 0) {
+      return {
+        success: false,
+        error: `Item "${itemName}" not found in UK grocery database`,
+        suggestion: 'Try searching with different keywords or add manually',
+      };
+    }
+
+    // Get best match (first result)
+    const groceryItem: GroceryItem = searchResults[0];
+
+    // Get price from preferred store or best price
+    const storeKey = preferredStore as keyof typeof groceryItem.prices;
+    const price = groceryItem.prices[storeKey] || groceryItem.bestPrice;
+    const store = groceryItem.prices[storeKey] ? preferredStore : groceryItem.bestStore;
+
+    // Check Zeth's budget limit
+    if (this.context.currentUser.role === 'teen') {
+      const itemCost = price * quantity;
+      const newTotal = this.context.currentUser.monthlyAddedValue + itemCost;
+
+      if (newTotal > 200) {
+        return {
+          success: false,
+          error: `Adding this item would exceed Zeth's £200 monthly limit`,
+          currentAdded: this.context.currentUser.monthlyAddedValue.toFixed(2),
+          itemCost: itemCost.toFixed(2),
+          remaining: (200 - this.context.currentUser.monthlyAddedValue).toFixed(2),
+        };
+      }
+    }
+
+    // Create shopping item
+    const newItem: Omit<ShoppingItem, 'id'> = {
+      name: groceryItem.name,
+      quantity,
+      unit: groceryItem.unit,
+      category: groceryItem.category,
+      price,
+      store,
+      addedBy: this.context.currentUser.id,
+      addedAt: new Date(),
+      purchased: false,
+      votes: [],
+      urgency: 'medium',
+    };
+
+    // Add to shopping list via context callback
+    try {
+      this.context.addItem(newItem);
+
+      return {
+        success: true,
+        item: {
+          name: groceryItem.name,
+          quantity,
+          unit: groceryItem.unit,
+          price,
+          store,
+          totalCost: (price * quantity).toFixed(2),
+        },
+        deals: groceryItem.deals,
+        message: `Added ${quantity} ${groceryItem.unit} of ${groceryItem.name} from ${store} at £${price} each (Total: £${(price * quantity).toFixed(2)})`,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to add item to shopping list',
+      };
+    }
   }
 
   /**

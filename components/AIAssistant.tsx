@@ -10,6 +10,7 @@ export function AIAssistant() {
   const aiMessages = useStore((state) => state.aiMessages);
   const addAIMessage = useStore((state) => state.addAIMessage);
   const clearAIMessages = useStore((state) => state.clearAIMessages);
+  const addShoppingItem = useStore((state) => state.addShoppingItem);
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -39,9 +40,10 @@ export function AIAssistant() {
         users,
         shoppingList: shoppingList.items,
         budget: currentUser.monthlyBudget - currentUser.currentSpent,
+        addItem: addShoppingItem,
       });
     }
-  }, [assistant, currentUser, users, shoppingList]);
+  }, [assistant, currentUser, users, shoppingList, addShoppingItem]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

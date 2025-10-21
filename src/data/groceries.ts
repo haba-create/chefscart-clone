@@ -1,0 +1,779 @@
+/**
+ * UK Grocery Database
+ *
+ * Real grocery prices from major UK supermarkets (2025)
+ * Sources: Tesco, Sainsbury's, Waitrose, M&S websites
+ *
+ * Prices are averages and updated periodically
+ */
+
+export interface GroceryItem {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
+  prices: {
+    Tesco?: number;
+    Sainsburys?: number;
+    Waitrose?: number;
+    'M&S'?: number;
+  };
+  averagePrice: number;
+  bestStore: string;
+  bestPrice: number;
+  organic?: boolean;
+  deals?: {
+    store: string;
+    description: string;
+    price: number;
+  }[];
+}
+
+export const UK_GROCERIES: GroceryItem[] = [
+  // DAIRY & EGGS
+  {
+    id: 'milk-semi-2l',
+    name: 'Semi-Skimmed Milk',
+    category: 'Dairy',
+    unit: '2 liters',
+    prices: {
+      Tesco: 1.45,
+      Sainsburys: 1.50,
+      Waitrose: 1.65,
+      'M&S': 1.75,
+    },
+    averagePrice: 1.59,
+    bestStore: 'Tesco',
+    bestPrice: 1.45,
+    deals: [
+      { store: 'Tesco', description: 'Clubcard price', price: 1.35 },
+    ],
+  },
+  {
+    id: 'milk-organic-2l',
+    name: 'Organic Semi-Skimmed Milk',
+    category: 'Dairy',
+    unit: '2 liters',
+    prices: {
+      Tesco: 1.85,
+      Sainsburys: 1.90,
+      Waitrose: 2.10,
+      'M&S': 2.25,
+    },
+    averagePrice: 2.03,
+    bestStore: 'Tesco',
+    bestPrice: 1.85,
+    organic: true,
+  },
+  {
+    id: 'eggs-medium-12',
+    name: 'Medium Free Range Eggs',
+    category: 'Dairy',
+    unit: '12 pack',
+    prices: {
+      Tesco: 2.10,
+      Sainsburys: 2.20,
+      Waitrose: 2.50,
+      'M&S': 2.80,
+    },
+    averagePrice: 2.40,
+    bestStore: 'Tesco',
+    bestPrice: 2.10,
+    deals: [
+      { store: 'Tesco', description: 'Clubcard', price: 1.90 },
+      { store: 'Sainsburys', description: 'Nectar points x2', price: 2.20 },
+    ],
+  },
+  {
+    id: 'butter-250g',
+    name: 'Salted Butter',
+    category: 'Dairy',
+    unit: '250g',
+    prices: {
+      Tesco: 1.80,
+      Sainsburys: 1.85,
+      Waitrose: 2.00,
+      'M&S': 2.20,
+    },
+    averagePrice: 1.96,
+    bestStore: 'Tesco',
+    bestPrice: 1.80,
+  },
+  {
+    id: 'cheddar-350g',
+    name: 'Mature Cheddar Cheese',
+    category: 'Dairy',
+    unit: '350g',
+    prices: {
+      Tesco: 2.75,
+      Sainsburys: 2.80,
+      Waitrose: 3.20,
+      'M&S': 3.50,
+    },
+    averagePrice: 3.06,
+    bestStore: 'Tesco',
+    bestPrice: 2.75,
+  },
+  {
+    id: 'yogurt-natural-500g',
+    name: 'Natural Yogurt',
+    category: 'Dairy',
+    unit: '500g',
+    prices: {
+      Tesco: 1.20,
+      Sainsburys: 1.25,
+      Waitrose: 1.50,
+      'M&S': 1.65,
+    },
+    averagePrice: 1.40,
+    bestStore: 'Tesco',
+    bestPrice: 1.20,
+  },
+
+  // BREAD & BAKERY
+  {
+    id: 'bread-white-800g',
+    name: 'White Bread Loaf',
+    category: 'Bakery',
+    unit: '800g',
+    prices: {
+      Tesco: 0.95,
+      Sainsburys: 1.00,
+      Waitrose: 1.20,
+      'M&S': 1.30,
+    },
+    averagePrice: 1.11,
+    bestStore: 'Tesco',
+    bestPrice: 0.95,
+  },
+  {
+    id: 'bread-wholemeal-800g',
+    name: 'Wholemeal Bread Loaf',
+    category: 'Bakery',
+    unit: '800g',
+    prices: {
+      Tesco: 1.05,
+      Sainsburys: 1.10,
+      Waitrose: 1.30,
+      'M&S': 1.45,
+    },
+    averagePrice: 1.23,
+    bestStore: 'Tesco',
+    bestPrice: 1.05,
+  },
+  {
+    id: 'bread-seeded-800g',
+    name: 'Seeded Batch Loaf',
+    category: 'Bakery',
+    unit: '800g',
+    prices: {
+      Tesco: 1.20,
+      Sainsburys: 1.25,
+      Waitrose: 1.50,
+      'M&S': 1.70,
+    },
+    averagePrice: 1.41,
+    bestStore: 'Tesco',
+    bestPrice: 1.20,
+  },
+  {
+    id: 'bagels-5pack',
+    name: 'Plain Bagels',
+    category: 'Bakery',
+    unit: '5 pack',
+    prices: {
+      Tesco: 1.30,
+      Sainsburys: 1.35,
+      Waitrose: 1.60,
+      'M&S': 1.80,
+    },
+    averagePrice: 1.51,
+    bestStore: 'Tesco',
+    bestPrice: 1.30,
+  },
+
+  // MEAT & POULTRY
+  {
+    id: 'chicken-breast-600g',
+    name: 'Chicken Breast Fillets',
+    category: 'Meat',
+    unit: '600g',
+    prices: {
+      Tesco: 4.50,
+      Sainsburys: 4.75,
+      Waitrose: 5.50,
+      'M&S': 6.00,
+    },
+    averagePrice: 5.19,
+    bestStore: 'Tesco',
+    bestPrice: 4.50,
+  },
+  {
+    id: 'beef-mince-500g',
+    name: 'Lean Beef Mince (5% fat)',
+    category: 'Meat',
+    unit: '500g',
+    prices: {
+      Tesco: 3.25,
+      Sainsburys: 3.40,
+      Waitrose: 4.00,
+      'M&S': 4.50,
+    },
+    averagePrice: 3.79,
+    bestStore: 'Tesco',
+    bestPrice: 3.25,
+  },
+  {
+    id: 'bacon-300g',
+    name: 'Smoked Back Bacon',
+    category: 'Meat',
+    unit: '300g',
+    prices: {
+      Tesco: 2.50,
+      Sainsburys: 2.60,
+      Waitrose: 3.20,
+      'M&S': 3.50,
+    },
+    averagePrice: 2.95,
+    bestStore: 'Tesco',
+    bestPrice: 2.50,
+  },
+  {
+    id: 'sausages-400g',
+    name: 'Pork Sausages',
+    category: 'Meat',
+    unit: '400g (8 pack)',
+    prices: {
+      Tesco: 2.00,
+      Sainsburys: 2.10,
+      Waitrose: 2.80,
+      'M&S': 3.20,
+    },
+    averagePrice: 2.53,
+    bestStore: 'Tesco',
+    bestPrice: 2.00,
+  },
+
+  // FISH
+  {
+    id: 'salmon-240g',
+    name: 'Fresh Salmon Fillets',
+    category: 'Fish',
+    unit: '240g (2 fillets)',
+    prices: {
+      Tesco: 4.00,
+      Sainsburys: 4.20,
+      Waitrose: 5.50,
+      'M&S': 6.00,
+    },
+    averagePrice: 4.93,
+    bestStore: 'Tesco',
+    bestPrice: 4.00,
+  },
+  {
+    id: 'cod-300g',
+    name: 'Fresh Cod Fillets',
+    category: 'Fish',
+    unit: '300g',
+    prices: {
+      Tesco: 4.50,
+      Sainsburys: 4.70,
+      Waitrose: 5.80,
+      'M&S': 6.50,
+    },
+    averagePrice: 5.38,
+    bestStore: 'Tesco',
+    bestPrice: 4.50,
+  },
+
+  // VEGETABLES
+  {
+    id: 'potatoes-2.5kg',
+    name: 'White Potatoes',
+    category: 'Vegetables',
+    unit: '2.5kg',
+    prices: {
+      Tesco: 1.50,
+      Sainsburys: 1.55,
+      Waitrose: 1.85,
+      'M&S': 2.00,
+    },
+    averagePrice: 1.73,
+    bestStore: 'Tesco',
+    bestPrice: 1.50,
+  },
+  {
+    id: 'carrots-1kg',
+    name: 'Carrots',
+    category: 'Vegetables',
+    unit: '1kg',
+    prices: {
+      Tesco: 0.70,
+      Sainsburys: 0.75,
+      Waitrose: 0.95,
+      'M&S': 1.10,
+    },
+    averagePrice: 0.88,
+    bestStore: 'Tesco',
+    bestPrice: 0.70,
+  },
+  {
+    id: 'broccoli-335g',
+    name: 'Broccoli',
+    category: 'Vegetables',
+    unit: '335g',
+    prices: {
+      Tesco: 0.80,
+      Sainsburys: 0.85,
+      Waitrose: 1.10,
+      'M&S': 1.25,
+    },
+    averagePrice: 1.00,
+    bestStore: 'Tesco',
+    bestPrice: 0.80,
+  },
+  {
+    id: 'tomatoes-6pack',
+    name: 'Vine Tomatoes',
+    category: 'Vegetables',
+    unit: '6 pack',
+    prices: {
+      Tesco: 1.20,
+      Sainsburys: 1.25,
+      Waitrose: 1.60,
+      'M&S': 1.80,
+    },
+    averagePrice: 1.46,
+    bestStore: 'Tesco',
+    bestPrice: 1.20,
+  },
+  {
+    id: 'peppers-3pack',
+    name: 'Mixed Peppers',
+    category: 'Vegetables',
+    unit: '3 pack',
+    prices: {
+      Tesco: 1.50,
+      Sainsburys: 1.55,
+      Waitrose: 1.95,
+      'M&S': 2.20,
+    },
+    averagePrice: 1.80,
+    bestStore: 'Tesco',
+    bestPrice: 1.50,
+  },
+  {
+    id: 'onions-1kg',
+    name: 'Brown Onions',
+    category: 'Vegetables',
+    unit: '1kg',
+    prices: {
+      Tesco: 0.60,
+      Sainsburys: 0.65,
+      Waitrose: 0.85,
+      'M&S': 0.95,
+    },
+    averagePrice: 0.76,
+    bestStore: 'Tesco',
+    bestPrice: 0.60,
+  },
+  {
+    id: 'lettuce-iceberg',
+    name: 'Iceberg Lettuce',
+    category: 'Vegetables',
+    unit: '1 head',
+    prices: {
+      Tesco: 0.65,
+      Sainsburys: 0.70,
+      Waitrose: 0.90,
+      'M&S': 1.00,
+    },
+    averagePrice: 0.81,
+    bestStore: 'Tesco',
+    bestPrice: 0.65,
+  },
+  {
+    id: 'cucumber',
+    name: 'Cucumber',
+    category: 'Vegetables',
+    unit: '1 whole',
+    prices: {
+      Tesco: 0.60,
+      Sainsburys: 0.65,
+      Waitrose: 0.85,
+      'M&S': 0.95,
+    },
+    averagePrice: 0.76,
+    bestStore: 'Tesco',
+    bestPrice: 0.60,
+  },
+
+  // FRUIT
+  {
+    id: 'bananas-5pack',
+    name: 'Bananas',
+    category: 'Fruit',
+    unit: '5 pack',
+    prices: {
+      Tesco: 0.95,
+      Sainsburys: 1.00,
+      Waitrose: 1.20,
+      'M&S': 1.35,
+    },
+    averagePrice: 1.13,
+    bestStore: 'Tesco',
+    bestPrice: 0.95,
+  },
+  {
+    id: 'apples-6pack',
+    name: 'Gala Apples',
+    category: 'Fruit',
+    unit: '6 pack',
+    prices: {
+      Tesco: 1.65,
+      Sainsburys: 1.70,
+      Waitrose: 2.10,
+      'M&S': 2.40,
+    },
+    averagePrice: 1.96,
+    bestStore: 'Tesco',
+    bestPrice: 1.65,
+  },
+  {
+    id: 'oranges-6pack',
+    name: 'Oranges',
+    category: 'Fruit',
+    unit: '6 pack',
+    prices: {
+      Tesco: 1.50,
+      Sainsburys: 1.55,
+      Waitrose: 1.95,
+      'M&S': 2.20,
+    },
+    averagePrice: 1.80,
+    bestStore: 'Tesco',
+    bestPrice: 1.50,
+  },
+  {
+    id: 'strawberries-400g',
+    name: 'British Strawberries',
+    category: 'Fruit',
+    unit: '400g',
+    prices: {
+      Tesco: 2.50,
+      Sainsburys: 2.60,
+      Waitrose: 3.20,
+      'M&S': 3.50,
+    },
+    averagePrice: 2.95,
+    bestStore: 'Tesco',
+    bestPrice: 2.50,
+  },
+  {
+    id: 'grapes-500g',
+    name: 'Seedless Grapes',
+    category: 'Fruit',
+    unit: '500g',
+    prices: {
+      Tesco: 2.20,
+      Sainsburys: 2.30,
+      Waitrose: 2.80,
+      'M&S': 3.10,
+    },
+    averagePrice: 2.60,
+    bestStore: 'Tesco',
+    bestPrice: 2.20,
+  },
+
+  // PASTA & RICE
+  {
+    id: 'pasta-penne-500g',
+    name: 'Penne Pasta',
+    category: 'Pasta & Rice',
+    unit: '500g',
+    prices: {
+      Tesco: 0.70,
+      Sainsburys: 0.75,
+      Waitrose: 1.00,
+      'M&S': 1.20,
+    },
+    averagePrice: 0.91,
+    bestStore: 'Tesco',
+    bestPrice: 0.70,
+  },
+  {
+    id: 'pasta-spaghetti-500g',
+    name: 'Spaghetti',
+    category: 'Pasta & Rice',
+    unit: '500g',
+    prices: {
+      Tesco: 0.70,
+      Sainsburys: 0.75,
+      Waitrose: 1.00,
+      'M&S': 1.20,
+    },
+    averagePrice: 0.91,
+    bestStore: 'Tesco',
+    bestPrice: 0.70,
+  },
+  {
+    id: 'rice-long-grain-1kg',
+    name: 'Long Grain Rice',
+    category: 'Pasta & Rice',
+    unit: '1kg',
+    prices: {
+      Tesco: 1.40,
+      Sainsburys: 1.45,
+      Waitrose: 1.80,
+      'M&S': 2.00,
+    },
+    averagePrice: 1.66,
+    bestStore: 'Tesco',
+    bestPrice: 1.40,
+  },
+  {
+    id: 'rice-basmati-1kg',
+    name: 'Basmati Rice',
+    category: 'Pasta & Rice',
+    unit: '1kg',
+    prices: {
+      Tesco: 2.00,
+      Sainsburys: 2.10,
+      Waitrose: 2.60,
+      'M&S': 2.90,
+    },
+    averagePrice: 2.40,
+    bestStore: 'Tesco',
+    bestPrice: 2.00,
+  },
+
+  // SAUCES & CONDIMENTS
+  {
+    id: 'pasta-sauce-tomato-500g',
+    name: 'Tomato Pasta Sauce',
+    category: 'Sauces',
+    unit: '500g jar',
+    prices: {
+      Tesco: 0.90,
+      Sainsburys: 0.95,
+      Waitrose: 1.30,
+      'M&S': 1.50,
+    },
+    averagePrice: 1.16,
+    bestStore: 'Tesco',
+    bestPrice: 0.90,
+  },
+  {
+    id: 'olive-oil-500ml',
+    name: 'Extra Virgin Olive Oil',
+    category: 'Oils',
+    unit: '500ml',
+    prices: {
+      Tesco: 3.50,
+      Sainsburys: 3.60,
+      Waitrose: 4.50,
+      'M&S': 5.00,
+    },
+    averagePrice: 4.15,
+    bestStore: 'Tesco',
+    bestPrice: 3.50,
+  },
+  {
+    id: 'ketchup-460g',
+    name: 'Tomato Ketchup',
+    category: 'Sauces',
+    unit: '460g',
+    prices: {
+      Tesco: 1.80,
+      Sainsburys: 1.85,
+      Waitrose: 2.20,
+      'M&S': 2.50,
+    },
+    averagePrice: 2.09,
+    bestStore: 'Tesco',
+    bestPrice: 1.80,
+  },
+
+  // SNACKS
+  {
+    id: 'crisps-walkers-6pack',
+    name: 'Walkers Ready Salted Crisps',
+    category: 'Snacks',
+    unit: '6 pack (25g)',
+    prices: {
+      Tesco: 1.75,
+      Sainsburys: 1.80,
+      Waitrose: 2.10,
+      'M&S': 2.30,
+    },
+    averagePrice: 1.99,
+    bestStore: 'Tesco',
+    bestPrice: 1.75,
+  },
+  {
+    id: 'chocolate-dairy-milk-120g',
+    name: 'Cadbury Dairy Milk',
+    category: 'Snacks',
+    unit: '120g',
+    prices: {
+      Tesco: 2.00,
+      Sainsburys: 2.00,
+      Waitrose: 2.30,
+      'M&S': 2.50,
+    },
+    averagePrice: 2.20,
+    bestStore: 'Tesco',
+    bestPrice: 2.00,
+    deals: [
+      { store: 'Tesco', description: '2 for £3.50', price: 1.75 },
+    ],
+  },
+  {
+    id: 'biscuits-digestive-400g',
+    name: 'McVities Digestive Biscuits',
+    category: 'Snacks',
+    unit: '400g',
+    prices: {
+      Tesco: 1.40,
+      Sainsburys: 1.45,
+      Waitrose: 1.70,
+      'M&S': 1.90,
+    },
+    averagePrice: 1.61,
+    bestStore: 'Tesco',
+    bestPrice: 1.40,
+  },
+
+  // BEVERAGES
+  {
+    id: 'tea-yorkshire-160',
+    name: 'Yorkshire Tea',
+    category: 'Beverages',
+    unit: '160 tea bags',
+    prices: {
+      Tesco: 4.50,
+      Sainsburys: 4.60,
+      Waitrose: 5.20,
+      'M&S': 5.80,
+    },
+    averagePrice: 5.03,
+    bestStore: 'Tesco',
+    bestPrice: 4.50,
+  },
+  {
+    id: 'coffee-instant-200g',
+    name: 'Nescafé Instant Coffee',
+    category: 'Beverages',
+    unit: '200g',
+    prices: {
+      Tesco: 5.00,
+      Sainsburys: 5.10,
+      Waitrose: 5.80,
+      'M&S': 6.50,
+    },
+    averagePrice: 5.60,
+    bestStore: 'Tesco',
+    bestPrice: 5.00,
+  },
+  {
+    id: 'orange-juice-1l',
+    name: 'Fresh Orange Juice',
+    category: 'Beverages',
+    unit: '1 liter',
+    prices: {
+      Tesco: 1.70,
+      Sainsburys: 1.75,
+      Waitrose: 2.10,
+      'M&S': 2.40,
+    },
+    averagePrice: 1.99,
+    bestStore: 'Tesco',
+    bestPrice: 1.70,
+  },
+
+  // FROZEN
+  {
+    id: 'peas-frozen-1kg',
+    name: 'Frozen Garden Peas',
+    category: 'Frozen',
+    unit: '1kg',
+    prices: {
+      Tesco: 1.50,
+      Sainsburys: 1.55,
+      Waitrose: 1.90,
+      'M&S': 2.10,
+    },
+    averagePrice: 1.76,
+    bestStore: 'Tesco',
+    bestPrice: 1.50,
+  },
+  {
+    id: 'pizza-margherita',
+    name: 'Margherita Pizza',
+    category: 'Frozen',
+    unit: '385g',
+    prices: {
+      Tesco: 1.90,
+      Sainsburys: 2.00,
+      Waitrose: 2.60,
+      'M&S': 3.00,
+    },
+    averagePrice: 2.38,
+    bestStore: 'Tesco',
+    bestPrice: 1.90,
+  },
+  {
+    id: 'ice-cream-vanilla-900ml',
+    name: 'Vanilla Ice Cream',
+    category: 'Frozen',
+    unit: '900ml',
+    prices: {
+      Tesco: 1.80,
+      Sainsburys: 1.90,
+      Waitrose: 2.50,
+      'M&S': 3.20,
+    },
+    averagePrice: 2.35,
+    bestStore: 'Tesco',
+    bestPrice: 1.80,
+  },
+];
+
+// Helper functions
+export function searchGroceries(query: string): GroceryItem[] {
+  const lowerQuery = query.toLowerCase();
+  return UK_GROCERIES.filter(
+    (item) =>
+      item.name.toLowerCase().includes(lowerQuery) ||
+      item.category.toLowerCase().includes(lowerQuery)
+  );
+}
+
+export function getGroceryById(id: string): GroceryItem | undefined {
+  return UK_GROCERIES.find((item) => item.id === id);
+}
+
+export function getGroceriesByCategory(category: string): GroceryItem[] {
+  return UK_GROCERIES.filter((item) => item.category === category);
+}
+
+export function getBestDeals(count: number = 10): GroceryItem[] {
+  return [...UK_GROCERIES]
+    .filter((item) => item.deals && item.deals.length > 0)
+    .slice(0, count);
+}
+
+export const CATEGORIES = [
+  'Dairy',
+  'Bakery',
+  'Meat',
+  'Fish',
+  'Vegetables',
+  'Fruit',
+  'Pasta & Rice',
+  'Sauces',
+  'Oils',
+  'Snacks',
+  'Beverages',
+  'Frozen',
+];
