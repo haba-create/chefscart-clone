@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { AIMessage, ShoppingItem, User, Recipe } from '../src/types';
+import type { AIMessage, ShoppingItem, User } from '../src/types';
 
 /**
  * Shopping Assistant Agent using Anthropic Claude

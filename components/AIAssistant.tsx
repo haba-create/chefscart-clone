@@ -20,6 +20,14 @@ export function AIAssistant() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Initialize API key from environment variable on mount
+  useEffect(() => {
+    const envApiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+    if (envApiKey) {
+      setApiKey(envApiKey);
+    }
+  }, []);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiMessages]);
