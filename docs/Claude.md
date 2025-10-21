@@ -4,10 +4,12 @@
 
 This document specifies the approved Claude models for use in the ChefsCart application.
 
+**IMPORTANT:** Requires `@anthropic-ai/sdk` version **>= 0.67.0**
+
 ### Production Models
 
 #### Claude Sonnet 4.5 (Primary Model)
-**Model ID:** `claude-sonnet-4-5-20250929`
+**Model ID:** `claude-sonnet-4-5-20250929` (or `claude-sonnet-4-5` for auto-updates)
 
 **Use Cases:**
 - AI Shopping Assistant (agents/shoppingAssistant.ts)
@@ -46,7 +48,7 @@ const response = await client.messages.create({
 ---
 
 #### Claude Haiku 4.5 (Fast Tasks)
-**Model ID:** `claude-haiku-4-5-20250229`
+**Model ID:** `claude-haiku-4-5-20251001` (or `claude-haiku-4-5` for auto-updates)
 
 **Use Cases:**
 - Quick lookups and simple queries
@@ -69,7 +71,7 @@ const response = await client.messages.create({
 **Configuration:**
 ```typescript
 const response = await client.messages.create({
-  model: 'claude-haiku-4-5-20250229',
+  model: 'claude-haiku-4-5-20251001',
   max_tokens: 1024,
   temperature: 1.0,
 });
@@ -96,14 +98,42 @@ const response = await client.messages.create({
 
 ---
 
+### SDK Version Requirements
+
+**CRITICAL:** You MUST use `@anthropic-ai/sdk` version **0.67.0 or higher** for Sonnet 4.5 and Haiku 4.5 models.
+
+**Old SDK versions (< 0.67.0) will result in 404 errors** with the new model IDs.
+
+```bash
+# Check your SDK version
+npm list @anthropic-ai/sdk
+
+# Update to latest
+npm install @anthropic-ai/sdk@latest
+```
+
+**Current version in project:** `0.67.0` ✅
+
+---
+
 ### Deprecated Models
 
 The following models should NOT be used:
 
-- ❌ `claude-3-5-sonnet-20241022` (Deprecated - returns 404)
+- ❌ `claude-3-5-sonnet-20241022` (Use claude-sonnet-4-5-20250929 instead)
 - ❌ `claude-3-opus-*` (Superseded by Sonnet 4.5)
 - ❌ `claude-3-sonnet-*` (Superseded by Sonnet 4.5)
 - ❌ `claude-3-haiku-*` (Superseded by Haiku 4.5)
+
+**Common Error:**
+```
+Error: 404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-3-5-sonnet-20241022"}}
+```
+
+**Solutions:**
+1. Update SDK to >= 0.67.0
+2. Use claude-sonnet-4-5-20250929 or claude-sonnet-4-5
+3. Ensure Railway has latest package.json/package-lock.json
 
 ---
 
