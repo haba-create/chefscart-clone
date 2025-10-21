@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useStore } from './store';
 import { Header } from '@components/Header';
-import { ShoppingList } from '@components/ShoppingList';
+import { Trolley } from '@components/Trolley';
 import { BudgetTracker } from '@components/BudgetTracker';
 import { Gamification } from '@components/Gamification';
 import { AIAssistant } from '@components/AIAssistant';
 import { MealPlanner } from '@components/MealPlanner';
 import { UserSwitcher } from '@components/UserSwitcher';
 
-type Tab = 'shopping' | 'budget' | 'gamification' | 'meals' | 'ai';
+type MainTab = 'trolley' | 'budget' | 'gamification' | 'meals';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('shopping');
+  const [activeTab, setActiveTab] = useState<MainTab>('trolley');
   const currentUser = useStore((state) => state.currentUser);
 
   if (!currentUser) {
@@ -26,58 +26,73 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
 
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* User Switcher */}
-        <div className="mb-6">
+      {/* User Switcher - Full Width */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="container mx-auto px-4 py-3 max-w-full">
           <UserSwitcher />
         </div>
+      </div>
 
-        {/* Tab Navigation */}
-        <div className="mb-6 overflow-x-auto">
-          <div className="flex space-x-2 border-b border-gray-200 min-w-max">
-            <TabButton
-              active={activeTab === 'shopping'}
-              onClick={() => setActiveTab('shopping')}
-              icon="🛒"
-              label="Shopping List"
-            />
-            <TabButton
-              active={activeTab === 'budget'}
-              onClick={() => setActiveTab('budget')}
-              icon="💰"
-              label="Budget"
-            />
-            <TabButton
-              active={activeTab === 'gamification'}
-              onClick={() => setActiveTab('gamification')}
-              icon="🏆"
-              label="Achievements"
-            />
-            <TabButton
-              active={activeTab === 'meals'}
-              onClick={() => setActiveTab('meals')}
-              icon="🍽️"
-              label="Meal Plans"
-            />
-            <TabButton
-              active={activeTab === 'ai'}
-              onClick={() => setActiveTab('ai')}
-              icon="🤖"
-              label="AI Assistant"
-            />
+      {/* Split Screen Layout: 33% AI Assistant | 67% Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel - AI Assistant (33%) */}
+        <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-primary-100">
+            <div className="flex items-center space-x-2">
+              <span className="text-2xl">🤖</span>
+              <h2 className="text-lg font-semibold text-primary-900">AI Assistant</h2>
+            </div>
+            <p className="text-xs text-primary-700 mt-1">Ask me anything about groceries, budgets, or recipes</p>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <AIAssistant />
           </div>
         </div>
 
-        {/* Tab Content */}
-        <div className="space-y-6">
-          {activeTab === 'shopping' && <ShoppingList />}
-          {activeTab === 'budget' && <BudgetTracker />}
-          {activeTab === 'gamification' && <Gamification />}
-          {activeTab === 'meals' && <MealPlanner />}
-          {activeTab === 'ai' && <AIAssistant />}
+        {/* Right Panel - Main Content (67%) */}
+        <div className="w-2/3 flex flex-col overflow-hidden">
+          {/* Navigation Tabs */}
+          <div className="bg-white border-b border-gray-200 px-6 py-3">
+            <div className="flex space-x-1">
+              <TabButton
+                active={activeTab === 'trolley'}
+                onClick={() => setActiveTab('trolley')}
+                icon="🛒"
+                label="Trolley"
+              />
+              <TabButton
+                active={activeTab === 'meals'}
+                onClick={() => setActiveTab('meals')}
+                icon="🍽️"
+                label="Meal Plans"
+              />
+              <TabButton
+                active={activeTab === 'budget'}
+                onClick={() => setActiveTab('budget')}
+                icon="💰"
+                label="Budget"
+              />
+              <TabButton
+                active={activeTab === 'gamification'}
+                onClick={() => setActiveTab('gamification')}
+                icon="🏆"
+                label="Achievements"
+              />
+            </div>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="flex-1 overflow-auto bg-gray-50 p-6">
+            <div className="max-w-6xl mx-auto">
+              {activeTab === 'trolley' && <Trolley />}
+              {activeTab === 'budget' && <BudgetTracker />}
+              {activeTab === 'gamification' && <Gamification />}
+              {activeTab === 'meals' && <MealPlanner />}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { DollarSign, TrendingDown, TrendingUp, AlertTriangle } from 'lucide-reac
 export function BudgetTracker() {
   const currentUser = useStore((state) => state.currentUser);
   const users = useStore((state) => state.users);
-  const shoppingList = useStore((state) => state.shoppingList);
+  const trolley = useStore((state) => state.trolley);
 
   if (!currentUser) return null;
 
@@ -234,10 +234,10 @@ export function BudgetTracker() {
               <DollarSign className="w-5 h-5 text-gray-400" />
             </div>
             <p className="text-3xl font-bold text-blue-600">
-              £{shoppingList.totalEstimatedCost.toFixed(2)}
+              £{trolley.totalEstimatedCost.toFixed(2)}
             </p>
             <p className="text-sm text-gray-500 mt-1">
-              {shoppingList.items.length} items
+              {trolley.items.length} items
             </p>
           </div>
 
@@ -247,13 +247,13 @@ export function BudgetTracker() {
               <TrendingDown className="w-5 h-5 text-gray-400" />
             </div>
             <p className="text-3xl font-bold text-green-600">
-              £{shoppingList.budgetRemaining.toFixed(2)}
+              £{trolley.budgetRemaining.toFixed(2)}
             </p>
             <p className="text-sm text-gray-500 mt-1">Remaining budget</p>
           </div>
         </div>
 
-        {shoppingList.totalEstimatedCost > familyRemaining && (
+        {trolley.totalEstimatedCost > familyRemaining && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-start space-x-3">
               <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
@@ -263,8 +263,8 @@ export function BudgetTracker() {
                 </h4>
                 <p className="text-sm text-red-700">
                   Your current shopping list costs £
-                  {shoppingList.totalEstimatedCost.toFixed(2)}, which is £
-                  {(shoppingList.totalEstimatedCost - familyRemaining).toFixed(2)}{' '}
+                  {trolley.totalEstimatedCost.toFixed(2)}, which is £
+                  {(trolley.totalEstimatedCost - familyRemaining).toFixed(2)}{' '}
                   over your remaining family budget. Consider removing items or
                   finding cheaper alternatives.
                 </p>

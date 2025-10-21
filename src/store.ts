@@ -2,8 +2,10 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
   User,
-  ShoppingList,
-  ShoppingItem,
+  Trolley,
+  TrolleyItem,
+  PurchaseHistory,
+  PurchasedItem,
   Challenge,
   MealPlan,
   AIMessage,
@@ -15,8 +17,11 @@ interface AppState {
   currentUser: User | null;
   users: User[];
 
-  // Shopping
-  shoppingList: ShoppingList;
+  // Trolley (Shopping Cart) - PERSISTED
+  trolley: Trolley;
+
+  // Purchase History - PERSISTED
+  purchaseHistory: PurchaseHistory;
 
   // Gamification
   challenges: Challenge[];
@@ -24,32 +29,42 @@ interface AppState {
   // Meal Planning
   mealPlan: MealPlan | null;
 
-  // AI Assistant
+  // AI Assistant (not persisted - fresh on each session)
   aiMessages: AIMessage[];
 
   // Notifications
   notifications: Notification[];
 
-  // Actions
+  // Trolley Actions
   setCurrentUser: (user: User) => void;
-  addShoppingItem: (item: Omit<ShoppingItem, 'id' | 'addedAt' | 'votes'>) => void;
-  removeShoppingItem: (itemId: string) => void;
+  addTrolleyItem: (item: Omit<TrolleyItem, 'id' | 'addedAt' | 'votes'>) => void;
+  removeTrolleyItem: (itemId: string) => void;
   toggleItemPurchased: (itemId: string) => void;
-  updateShoppingItem: (itemId: string, updates: Partial<ShoppingItem>) => void;
+  updateTrolleyItem: (itemId: string, updates: Partial<TrolleyItem>) => void;
   voteOnItem: (itemId: string, userId: string, vote: 'approve' | 'reject' | 'neutral') => void;
 
+  // Purchase History Actions
+  moveTrolleyItemToPurchaseHistory: (itemId: string) => void;
+  addToPurchaseHistory: (item: Omit<PurchasedItem, 'id'>) => void;
+  clearPurchaseHistory: () => void;
+
+  // Gamification Actions
   addPoints: (userId: string, points: number) => void;
   completeChallenge: (challengeId: string) => void;
   addBadge: (userId: string, badge: any) => void;
 
+  // Meal Planning Actions
   setMealPlan: (mealPlan: MealPlan) => void;
 
+  // AI Assistant Actions
   addAIMessage: (message: AIMessage) => void;
   clearAIMessages: () => void;
 
+  // Notification Actions
   addNotification: (notification: Omit<Notification, 'id' | 'createdAt'>) => void;
   markNotificationRead: (notificationId: string) => void;
 
+  // Budget Actions
   updateUserBudget: (userId: string, amount: number) => void;
 }
 
@@ -107,12 +122,19 @@ const defaultUsers: User[] = [
   },
 ];
 
-const defaultShoppingList: ShoppingList = {
-  id: 'list-1',
+const defaultTrolley: Trolley = {
+  id: 'trolley-1',
   items: [],
   lastUpdated: new Date(),
   totalEstimatedCost: 0,
   budgetRemaining: 1000, // Family budget £1000 total
+};
+
+const defaultPurchaseHistory: PurchaseHistory = {
+  id: 'history-1',
+  purchases: [],
+  lastUpdated: new Date(),
+  totalSpent: 0,
 };
 
 const defaultChallenges: Challenge[] = [
@@ -159,7 +181,8 @@ export const useStore = create<AppState>()(
     (set, get) => ({
       currentUser: defaultUsers[2], // Start with teen user
       users: defaultUsers,
-      shoppingList: defaultShoppingList,
+      trolley: defaultTrolley,
+      purchaseHistory: defaultPurchaseHistory,
       challenges: defaultChallenges,
       mealPlan: null,
       aiMessages: [],
@@ -167,7 +190,7 @@ export const useStore = create<AppState>()(
 
       setCurrentUser: (user) => set({ currentUser: user }),
 
-      addShoppingItem: (item) =>
+      addTrolleyItem: (item) =>
         set((state) => {
           // Check if user is Zeth and enforce £200 monthly limit
           const currentUser = state.currentUser;
@@ -182,14 +205,14 @@ export const useStore = create<AppState>()(
             }
           }
 
-          const newItem: ShoppingItem = {
+          const newItem: TrolleyItem = {
             ...item,
             id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             addedAt: new Date(),
             votes: [],
           };
 
-          const updatedItems = [...state.shoppingList.items, newItem];
+          const updatedItems = [...state.trolley.items, newItem];
           const totalEstimatedCost = updatedItems.reduce(
             (sum, item) => sum + (item.price || 0) * item.quantity,
             0
@@ -205,8 +228,8 @@ export const useStore = create<AppState>()(
             : state.users;
 
           return {
-            shoppingList: {
-              ...state.shoppingList,
+            trolley: {
+              ...state.trolley,
               items: updatedItems,
               lastUpdated: new Date(),
               totalEstimatedCost,
@@ -219,10 +242,10 @@ export const useStore = create<AppState>()(
           };
         }),
 
-      removeShoppingItem: (itemId) =>
+      removeTrolleyItem: (itemId) =>
         set((state) => {
-          const removedItem = state.shoppingList.items.find(item => item.id === itemId);
-          const updatedItems = state.shoppingList.items.filter(
+          const removedItem = state.trolley.items.find(item => item.id === itemId);
+          const updatedItems = state.trolley.items.filter(
             (item) => item.id !== itemId
           );
           const totalEstimatedCost = updatedItems.reduce(
@@ -246,8 +269,8 @@ export const useStore = create<AppState>()(
             : state.users;
 
           return {
-            shoppingList: {
-              ...state.shoppingList,
+            trolley: {
+              ...state.trolley,
               items: updatedItems,
               lastUpdated: new Date(),
               totalEstimatedCost,
@@ -262,18 +285,18 @@ export const useStore = create<AppState>()(
 
       toggleItemPurchased: (itemId) =>
         set((state) => ({
-          shoppingList: {
-            ...state.shoppingList,
-            items: state.shoppingList.items.map((item) =>
+          trolley: {
+            ...state.trolley,
+            items: state.trolley.items.map((item) =>
               item.id === itemId ? { ...item, purchased: !item.purchased } : item
             ),
             lastUpdated: new Date(),
           },
         })),
 
-      updateShoppingItem: (itemId, updates) =>
+      updateTrolleyItem: (itemId, updates) =>
         set((state) => {
-          const updatedItems = state.shoppingList.items.map((item) =>
+          const updatedItems = state.trolley.items.map((item) =>
             item.id === itemId ? { ...item, ...updates } : item
           );
           const totalEstimatedCost = updatedItems.reduce(
@@ -282,21 +305,21 @@ export const useStore = create<AppState>()(
           );
 
           return {
-            shoppingList: {
-              ...state.shoppingList,
+            trolley: {
+              ...state.trolley,
               items: updatedItems,
               lastUpdated: new Date(),
               totalEstimatedCost,
-              budgetRemaining: 1400 - totalEstimatedCost,
+              budgetRemaining: 1000 - totalEstimatedCost,
             },
           };
         }),
 
       voteOnItem: (itemId, userId, vote) =>
         set((state) => ({
-          shoppingList: {
-            ...state.shoppingList,
-            items: state.shoppingList.items.map((item) => {
+          trolley: {
+            ...state.trolley,
+            items: state.trolley.items.map((item) => {
               if (item.id !== itemId) return item;
 
               const existingVoteIndex = item.votes.findIndex(
@@ -315,6 +338,87 @@ export const useStore = create<AppState>()(
             lastUpdated: new Date(),
           },
         })),
+
+      // Purchase History Actions
+      moveTrolleyItemToPurchaseHistory: (itemId) =>
+        set((state) => {
+          const item = state.trolley.items.find(i => i.id === itemId);
+          if (!item || !item.purchased || !item.price || !item.store) return state;
+
+          const currentUser = state.currentUser;
+          if (!currentUser) return state;
+
+          const purchasedItem: PurchasedItem = {
+            id: `purchase-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: item.name,
+            quantity: item.quantity,
+            unit: item.unit,
+            category: item.category,
+            price: item.price,
+            store: item.store,
+            purchasedBy: currentUser.id,
+            purchasedAt: new Date(),
+            addedBy: item.addedBy,
+            notes: item.notes,
+          };
+
+          const updatedPurchases = [...state.purchaseHistory.purchases, purchasedItem];
+          const totalSpent = updatedPurchases.reduce(
+            (sum, p) => sum + p.price * p.quantity,
+            0
+          );
+
+          // Remove from trolley
+          const updatedTrolleyItems = state.trolley.items.filter(i => i.id !== itemId);
+          const totalEstimatedCost = updatedTrolleyItems.reduce(
+            (sum, item) => sum + (item.price || 0) * item.quantity,
+            0
+          );
+
+          return {
+            purchaseHistory: {
+              ...state.purchaseHistory,
+              purchases: updatedPurchases,
+              lastUpdated: new Date(),
+              totalSpent,
+            },
+            trolley: {
+              ...state.trolley,
+              items: updatedTrolleyItems,
+              lastUpdated: new Date(),
+              totalEstimatedCost,
+              budgetRemaining: 1000 - totalEstimatedCost,
+            },
+          };
+        }),
+
+      addToPurchaseHistory: (item) =>
+        set((state) => {
+          const purchasedItem: PurchasedItem = {
+            ...item,
+            id: `purchase-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          };
+
+          const updatedPurchases = [...state.purchaseHistory.purchases, purchasedItem];
+          const totalSpent = updatedPurchases.reduce(
+            (sum, p) => sum + p.price * p.quantity,
+            0
+          );
+
+          return {
+            purchaseHistory: {
+              ...state.purchaseHistory,
+              purchases: updatedPurchases,
+              lastUpdated: new Date(),
+              totalSpent,
+            },
+          };
+        }),
+
+      clearPurchaseHistory: () =>
+        set({
+          purchaseHistory: defaultPurchaseHistory,
+        }),
 
       addPoints: (userId, points) =>
         set((state) => ({
@@ -399,6 +503,12 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'chefscart-storage',
+      // Only persist trolley and purchase history
+      // Everything else (users, challenges, AI messages, etc.) will reset on refresh
+      partialize: (state) => ({
+        trolley: state.trolley,
+        purchaseHistory: state.purchaseHistory,
+      }),
     }
   )
 );

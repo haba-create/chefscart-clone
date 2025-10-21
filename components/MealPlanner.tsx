@@ -181,7 +181,7 @@ const sampleRecipes: Recipe[] = [
 export function MealPlanner() {
   const currentUser = useStore((state) => state.currentUser);
   const addPoints = useStore((state) => state.addPoints);
-  const addShoppingItem = useStore((state) => state.addShoppingItem);
+  const addTrolleyItem = useStore((state) => state.addTrolleyItem);
 
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [plannedMeals, setPlannedMeals] = useState<PlannedMeal[]>([]);
@@ -190,7 +190,7 @@ export function MealPlanner() {
     if (!currentUser) return;
 
     recipe.ingredients.forEach((ingredient) => {
-      addShoppingItem({
+      addTrolleyItem({
         name: ingredient.name,
         quantity: ingredient.quantity,
         unit: ingredient.unit,
