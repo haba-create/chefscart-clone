@@ -23,8 +23,11 @@ export function AIAssistant() {
   // Initialize API key from environment variable on mount
   useEffect(() => {
     const envApiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-    if (envApiKey) {
+    if (envApiKey && envApiKey !== 'undefined' && envApiKey !== '') {
+      console.log('✓ API key loaded from environment');
       setApiKey(envApiKey);
+    } else {
+      console.log('⚠ No API key found in environment - please set VITE_ANTHROPIC_API_KEY or enter manually');
     }
   }, []);
 
@@ -80,13 +83,13 @@ export function AIAssistant() {
         content: response,
         timestamp: new Date(),
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
+      const errorMessage = error?.message || error?.toString() || 'Unknown error';
       addAIMessage({
         id: `msg-${Date.now()}-error`,
         role: 'assistant',
-        content:
-          'Sorry, I encountered an error. Please check your API key and try again.',
+        content: `Sorry, I encountered an error: ${errorMessage}\n\nPlease check:\n1. Your API key is valid\n2. You have credits in your Anthropic account\n3. Your internet connection is working`,
         timestamp: new Date(),
       });
     } finally {
@@ -127,6 +130,13 @@ export function AIAssistant() {
           response = await assistant.getTeenMealSuggestions({
             budget: currentUser.monthlyBudget - currentUser.currentSpent,
             dietaryRestrictions: currentUser.preferences.dietaryRestrictions,
+          });
+          break;
+        case 'search':
+          // Search supermarkets for common items
+          response = await assistant.searchSupermarkets('weekly essentials', {
+            stores: ['M&S', 'Waitrose', 'Tesco', 'Sainsburys'],
+            maxPrice: currentUser.monthlyBudget - currentUser.currentSpent,
           });
           break;
         default:
@@ -218,7 +228,21 @@ export function AIAssistant() {
       {aiMessages.length === 0 && (
         <div className="card">
           <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <button
+              onClick={() => handleQuickAction('search')}
+              disabled={isLoading}
+              className="p-4 border-2 border-orange-200 bg-orange-50 rounded-lg hover:border-orange-400 transition-all text-left disabled:opacity-50"
+            >
+              <Sparkles className="w-6 h-6 text-orange-600 mb-2" />
+              <h4 className="font-semibold text-gray-900 mb-1">
+                Search Supermarkets
+              </h4>
+              <p className="text-sm text-gray-600">
+                Compare M&S, Waitrose, Tesco, Sainsbury's
+              </p>
+            </button>
+
             <button
               onClick={() => handleQuickAction('suggestions')}
               disabled={isLoading}

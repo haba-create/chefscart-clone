@@ -53,49 +53,50 @@ interface AppState {
   updateUserBudget: (userId: string, amount: number) => void;
 }
 
-// Initialize default users (parent1, parent2, teen)
+// Initialize default users - Stephen, Cheslyn (Chez), and Zeth
+// Family budget: £1000 total (£500 essentials managed by Chez, £500 shared)
 const defaultUsers: User[] = [
   {
     id: 'user-1',
-    name: 'Parent 1',
+    name: 'Stephen',
     role: 'parent1',
-    monthlyBudget: 600,
+    monthlyBudget: 500, // Access to shared budget
     currentSpent: 0,
     points: 0,
     level: 1,
     badges: [],
     preferences: {
-      favoriteStores: ['Tesco', 'Sainsburys'],
+      favoriteStores: ['Tesco', 'Sainsburys', 'M&S', 'Waitrose'],
       dietaryRestrictions: [],
       notifications: true,
     },
   },
   {
     id: 'user-2',
-    name: 'Parent 2',
+    name: 'Cheslyn',
     role: 'parent2',
-    monthlyBudget: 600,
+    monthlyBudget: 500, // Manages essentials budget
     currentSpent: 0,
     points: 0,
     level: 1,
     badges: [],
     preferences: {
-      favoriteStores: ['Aldi', 'Lidl'],
+      favoriteStores: ['Tesco', 'Sainsburys', 'M&S', 'Waitrose'],
       dietaryRestrictions: [],
       notifications: true,
     },
   },
   {
     id: 'user-3',
-    name: 'Teen',
+    name: 'Zeth',
     role: 'teen',
-    monthlyBudget: 200,
+    monthlyBudget: 500, // Access to shared budget
     currentSpent: 0,
     points: 0,
     level: 1,
     badges: [],
     preferences: {
-      favoriteStores: ['Tesco'],
+      favoriteStores: ['Tesco', 'Sainsburys', 'M&S', 'Waitrose'],
       dietaryRestrictions: [],
       notifications: true,
     },
@@ -107,7 +108,7 @@ const defaultShoppingList: ShoppingList = {
   items: [],
   lastUpdated: new Date(),
   totalEstimatedCost: 0,
-  budgetRemaining: 1400,
+  budgetRemaining: 1000, // Family budget £1000 (£500 essentials + £500 shared)
 };
 
 const defaultChallenges: Challenge[] = [
@@ -117,7 +118,7 @@ const defaultChallenges: Challenge[] = [
     description: 'Stay within budget for the month',
     type: 'budget',
     points: 100,
-    targetValue: 1400,
+    targetValue: 1000, // Family budget £1000
     currentValue: 0,
     startDate: new Date(),
     endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
