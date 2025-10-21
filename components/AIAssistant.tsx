@@ -1,58 +1,64 @@
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../src/store';
 import { createShoppingAssistant } from '@agents/shoppingAssistant';
-import { Send, Bot, User, Loader, Settings, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Loader, Sparkles } from 'lucide-react';
 
 export function AIAssistant() {
   const currentUser = useStore((state) => state.currentUser);
   const shoppingList = useStore((state) => state.shoppingList);
+  const users = useStore((state) => state.users);
   const aiMessages = useStore((state) => state.aiMessages);
   const addAIMessage = useStore((state) => state.addAIMessage);
   const clearAIMessages = useStore((state) => state.clearAIMessages);
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
   const [assistant, setAssistant] = useState<ReturnType<
     typeof createShoppingAssistant
   > | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize API key from environment variable on mount
+  // Initialize assistant from environment variable on mount
   useEffect(() => {
-    const envApiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-    if (envApiKey && envApiKey !== 'undefined' && envApiKey !== '') {
+    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+    if (apiKey && apiKey !== 'undefined' && apiKey !== '') {
       console.log('✓ API key loaded from environment');
-      setApiKey(envApiKey);
+      const newAssistant = createShoppingAssistant(apiKey);
+      setAssistant(newAssistant);
     } else {
-      console.log('⚠ No API key found in environment - please set VITE_ANTHROPIC_API_KEY or enter manually');
+      console.error('❌ VITE_ANTHROPIC_API_KEY environment variable not set');
     }
   }, []);
+
+  // Update assistant context when user or shopping list changes
+  useEffect(() => {
+    if (assistant && currentUser) {
+      assistant.setContext({
+        currentUser,
+        users,
+        shoppingList: shoppingList.items,
+        budget: currentUser.monthlyBudget - currentUser.currentSpent,
+      });
+    }
+  }, [assistant, currentUser, users, shoppingList]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiMessages]);
 
-  const initializeAssistant = () => {
-    if (!apiKey) {
-      alert('Please enter your Anthropic API key in settings');
-      setShowSettings(true);
-      return false;
-    }
-
-    if (!assistant) {
-      const newAssistant = createShoppingAssistant(apiKey);
-      setAssistant(newAssistant);
-    }
-    return true;
-  };
-
   const handleSendMessage = async () => {
     if (!input.trim() || !currentUser) return;
 
-    if (!initializeAssistant()) return;
+    if (!assistant) {
+      addAIMessage({
+        id: `msg-${Date.now()}-error`,
+        role: 'assistant',
+        content: 'AI Assistant is not available. Please ensure VITE_ANTHROPIC_API_KEY is set in your environment.',
+        timestamp: new Date(),
+      });
+      return;
+    }
 
     const userMessage = input.trim();
     setInput('');
@@ -67,15 +73,7 @@ export function AIAssistant() {
     });
 
     try {
-      if (!assistant) {
-        throw new Error('Assistant not initialized');
-      }
-
-      const response = await assistant.chat(userMessage, {
-        currentUser,
-        shoppingList: shoppingList.items,
-        budget: currentUser.monthlyBudget - currentUser.currentSpent,
-      });
+      const response = await assistant.chat(userMessage);
 
       addAIMessage({
         id: `msg-${Date.now()}-assistant`,
@@ -89,7 +87,7 @@ export function AIAssistant() {
       addAIMessage({
         id: `msg-${Date.now()}-error`,
         role: 'assistant',
-        content: `Sorry, I encountered an error: ${errorMessage}\n\nPlease check:\n1. Your API key is valid\n2. You have credits in your Anthropic account\n3. Your internet connection is working`,
+        content: `Sorry, I encountered an error: ${errorMessage}\n\nPlease ensure:\n1. VITE_ANTHROPIC_API_KEY is set in Railway\n2. Your API key is valid\n3. You have credits in your Anthropic account\n4. Your internet connection is working`,
         timestamp: new Date(),
       });
     } finally {
@@ -99,49 +97,48 @@ export function AIAssistant() {
 
   const handleQuickAction = async (action: string) => {
     if (!currentUser) return;
-    if (!initializeAssistant()) return;
+
+    if (!assistant) {
+      addAIMessage({
+        id: `msg-${Date.now()}-error`,
+        role: 'assistant',
+        content: 'AI Assistant is not available. Please ensure VITE_ANTHROPIC_API_KEY is set in your environment.',
+        timestamp: new Date(),
+      });
+      return;
+    }
 
     setIsLoading(true);
 
     try {
-      if (!assistant) {
-        throw new Error('Assistant not initialized');
-      }
-
-      let response = '';
+      let userMessage = '';
 
       switch (action) {
         case 'suggestions':
-          response = await assistant.getSuggestions({
-            currentUser,
-            shoppingList: shoppingList.items,
-            budget: currentUser.monthlyBudget - currentUser.currentSpent,
-            preferences: currentUser.preferences.favoriteStores,
-          });
+          userMessage = 'Can you give me some smart suggestions for my shopping list based on my budget and preferences?';
           break;
         case 'budget':
-          response = await assistant.analyzeBudget({
-            shoppingList: shoppingList.items,
-            budget: currentUser.monthlyBudget,
-            currentSpent: currentUser.currentSpent,
-          });
+          userMessage = 'Can you analyze my budget and give me tips on how to optimize my spending and save money?';
           break;
         case 'meals':
-          response = await assistant.getTeenMealSuggestions({
-            budget: currentUser.monthlyBudget - currentUser.currentSpent,
-            dietaryRestrictions: currentUser.preferences.dietaryRestrictions,
-          });
+          userMessage = 'Can you suggest some teen-friendly meal ideas that fit within my budget?';
           break;
         case 'search':
-          // Search supermarkets for common items
-          response = await assistant.searchSupermarkets('weekly essentials', {
-            stores: ['M&S', 'Waitrose', 'Tesco', 'Sainsburys'],
-            maxPrice: currentUser.monthlyBudget - currentUser.currentSpent,
-          });
+          userMessage = 'Can you search for weekly essentials across M&S, Waitrose, Tesco, and Sainsburys and compare prices?';
           break;
         default:
           return;
       }
+
+      // Add user message
+      addAIMessage({
+        id: `msg-${Date.now()}-user`,
+        role: 'user',
+        content: userMessage,
+        timestamp: new Date(),
+      });
+
+      const response = await assistant.chat(userMessage);
 
       addAIMessage({
         id: `msg-${Date.now()}-assistant`,
@@ -149,12 +146,13 @@ export function AIAssistant() {
         content: response,
         timestamp: new Date(),
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error with quick action:', error);
+      const errorMessage = error?.message || error?.toString() || 'Unknown error';
       addAIMessage({
         id: `msg-${Date.now()}-error`,
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
+        content: `Sorry, I encountered an error: ${errorMessage}\n\nPlease ensure VITE_ANTHROPIC_API_KEY is set in Railway.`,
         timestamp: new Date(),
       });
     } finally {
@@ -173,55 +171,19 @@ export function AIAssistant() {
     <div className="space-y-6">
       {/* Header */}
       <div className="card">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
-              <Bot className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                AI Shopping Assistant
-              </h2>
-              <p className="text-sm text-gray-600">
-                Powered by Anthropic Claude
-              </p>
-            </div>
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
+            <Bot className="w-7 h-7 text-white" />
           </div>
-
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Settings Panel */}
-        {showSettings && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Anthropic API Key
-            </label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-ant-..."
-              className="input-field"
-            />
-            <p className="text-xs text-gray-500 mt-2">
-              Get your API key from{' '}
-              <a
-                href="https://console.anthropic.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                console.anthropic.com
-              </a>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">
+              AI Shopping Assistant
+            </h2>
+            <p className="text-sm text-gray-600">
+              Powered by Anthropic Claude with Tools API
             </p>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Quick Actions */}
@@ -416,54 +378,53 @@ export function AIAssistant() {
       {/* AI Features */}
       <div className="card bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200">
         <h3 className="font-semibold text-gray-900 mb-4">
-          What I Can Help With
+          AI-First Shopping Assistant
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-start space-x-3">
             <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white">💡</span>
+              <span className="text-white">🔍</span>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900">Smart Suggestions</h4>
+              <h4 className="font-semibold text-gray-900">UK Supermarket Search</h4>
               <p className="text-sm text-gray-600">
-                Get personalized shopping recommendations based on your budget and
-                preferences
+                Search and compare prices across M&S, Waitrose, Tesco, and Sainsbury's
               </p>
             </div>
           </div>
 
           <div className="flex items-start space-x-3">
             <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white">💰</span>
+              <span className="text-white">🧮</span>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900">Budget Optimization</h4>
+              <h4 className="font-semibold text-gray-900">Budget Calculator</h4>
               <p className="text-sm text-gray-600">
-                Analyze your spending and find ways to save money
+                Code interpreter for complex budget calculations and spending predictions
               </p>
             </div>
           </div>
 
           <div className="flex items-start space-x-3">
             <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white">🍽️</span>
+              <span className="text-white">📊</span>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900">Meal Planning</h4>
+              <h4 className="font-semibold text-gray-900">List Analysis</h4>
               <p className="text-sm text-gray-600">
-                Get teen-approved meal ideas that fit your budget
+                Analyze shopping list for budget, health, and optimization opportunities
               </p>
             </div>
           </div>
 
           <div className="flex items-start space-x-3">
             <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white">🏷️</span>
+              <span className="text-white">💡</span>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900">Price Insights</h4>
+              <h4 className="font-semibold text-gray-900">Smart Suggestions</h4>
               <p className="text-sm text-gray-600">
-                Learn about typical UK supermarket prices and find deals
+                AI-powered item suggestions based on family patterns and preferences
               </p>
             </div>
           </div>
