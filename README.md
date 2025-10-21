@@ -2,21 +2,26 @@
 
 An intelligent grocery shopping application designed for families in London, with special features to engage teenagers in monthly grocery planning. Built with React, TypeScript, Vite, and powered by Anthropic Claude AI.
 
+**Version 2.0** - Major architectural refactoring with trolley-based design and purchase history tracking.
+
 ## Features
 
 ### For the Whole Family
-- **Shared Shopping List**: Collaborative shopping list where all family members can add items, vote, and comment
-- **Budget Tracking**: Individual and family-wide budget monitoring with real-time updates
-- **UK Supermarket Focus**: Tailored for London families with tips for Tesco, Sainsbury's, Asda, Morrisons, Aldi, and Lidl
-- **Meal Planning**: Browse teen-friendly recipes and automatically generate shopping lists
-- **AI Shopping Assistant**: Powered by Anthropic Claude for smart suggestions, budget analysis, and meal ideas
+- **Shopping Trolley**: Collaborative shopping cart where all family members can add items, vote, and comment (UK terminology)
+- **AI-First Design**: 33/67 split-screen layout with AI Assistant always visible
+- **Budget Tracking**: Family budget (£1000/month) with Zeth's £200 monthly add limit
+- **UK Supermarket Focus**: Real UK stores - Ocado, Waitrose, Tesco, Sainsbury's, M&S
+- **Purchase History**: Track what you've bought and learn from past purchases
+- **Meal Planning**: Browse teen-friendly recipes and automatically generate trolley items
+- **AI Shopping Assistant**: Powered by Anthropic Claude with Tools API for intelligent shopping
 
 ### Teen Engagement Features
 - **Gamification**: Points, badges, levels, and challenges to make shopping fun
-- **Family Leaderboard**: Friendly competition to encourage participation
-- **Budget Learning**: Teach financial responsibility with personal budget allocations
-- **Voting System**: Democratic decision-making on shopping items
+- **Family Participation**: Stephen (Dad), Cheslyn (Mum), Zeth (16-year-old son)
+- **Budget Learning**: Zeth has £200 monthly limit to learn financial responsibility
+- **Voting System**: Democratic decision-making on trolley items
 - **Achievement System**: Unlock badges for good shopping habits
+- **AI Companion**: Always available to answer questions and help with decisions
 
 ## Tech Stack
 
@@ -34,20 +39,29 @@ An intelligent grocery shopping application designed for families in London, wit
 chefscart-clone/
 ├── src/
 │   ├── main.tsx           # App entry point
-│   ├── App.tsx            # Main app component
+│   ├── App.tsx            # Main app (33/67 split-screen layout)
 │   ├── types.ts           # TypeScript type definitions
-│   ├── store.ts           # Zustand state management
+│   ├── store.ts           # Zustand state (persist trolley + history only)
+│   ├── data/
+│   │   └── groceries.ts   # UK grocery database (67 products)
 │   └── index.css          # Global styles
 ├── components/
 │   ├── Header.tsx         # App header with user info
 │   ├── UserSwitcher.tsx   # Switch between family members
-│   ├── ShoppingList.tsx   # Shopping list management
+│   ├── Trolley.tsx        # Shopping trolley (renamed from ShoppingList)
 │   ├── BudgetTracker.tsx  # Budget tracking and analytics
 │   ├── Gamification.tsx   # Points, badges, challenges
 │   ├── MealPlanner.tsx    # Meal planning and recipes
-│   └── AIAssistant.tsx    # AI-powered shopping assistant
+│   └── AIAssistant.tsx    # AI Assistant (33% left sidebar, always visible)
 ├── agents/
-│   └── shoppingAssistant.ts  # Anthropic AI agent logic
+│   └── shoppingAssistant.ts  # Anthropic Claude agent with Tools API
+├── docs/
+│   ├── ARCHITECTURE.md    # Architecture documentation
+│   ├── LAYOUT-DESIGN.md   # 33/67 split-screen layout details
+│   ├── FUNCTIONALITY-INVENTORY.md  # Feature inventory
+│   └── Claude.md          # AI assistant documentation
+├── tests/
+│   └── *.spec.ts          # Playwright E2E tests
 ├── tests/
 │   ├── shopping-list.spec.ts
 │   ├── user-switching.spec.ts
