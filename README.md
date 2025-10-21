@@ -217,6 +217,8 @@ Uses Zustand with localStorage persistence:
 
 ## Environment Variables
 
+### Local Development
+
 Create a `.env.local` file (optional):
 
 ```env
@@ -224,6 +226,19 @@ VITE_ANTHROPIC_API_KEY=your_api_key_here
 ```
 
 Or enter it directly in the AI Assistant settings panel.
+
+### Railway.app Deployment
+
+When deploying to Railway:
+
+1. Go to your Railway project settings
+2. Navigate to the "Variables" tab
+3. Add the following environment variable:
+   - **Key**: `VITE_ANTHROPIC_API_KEY`
+   - **Value**: Your Anthropic API key (get it from https://console.anthropic.com/)
+4. Redeploy the application
+
+The app will automatically use the environment variable if it's set, otherwise users can enter the API key manually in the AI Assistant settings panel.
 
 ## Building for Production
 
@@ -237,6 +252,24 @@ Preview the production build:
 ```bash
 npm run preview
 ```
+
+## Deploying to Railway.app
+
+1. **Connect your repository** to Railway
+2. **Configure build settings**:
+   - Build Command: `npm install && npm run build`
+   - Start Command: `npm run preview` (or use a static server like `npx serve dist`)
+3. **Add environment variables**:
+   - Go to Variables tab
+   - Add `VITE_ANTHROPIC_API_KEY` with your Anthropic API key
+4. **Deploy**!
+
+Railway will automatically:
+- Install dependencies
+- Build the TypeScript + React app
+- Serve the production build
+
+**Important**: Make sure to set `VITE_ANTHROPIC_API_KEY` in Railway's environment variables for the AI Assistant to work out of the box.
 
 ## Browser Support
 
