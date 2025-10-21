@@ -170,82 +170,65 @@ export function AIAssistant() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="card">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
-            <Bot className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              AI Shopping Assistant
-            </h2>
-            <p className="text-sm text-gray-600">
-              Powered by Anthropic Claude with Tools API
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
+    <div className="h-full flex flex-col bg-white">
+      {/* Quick Actions - Compact for Sidebar */}
       {aiMessages.length === 0 && (
-        <div className="card">
-          <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="p-4 border-b border-gray-200">
+          <h3 className="font-semibold text-gray-900 mb-3 text-sm">Quick Actions</h3>
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => handleQuickAction('search')}
               disabled={isLoading}
-              className="p-4 border-2 border-orange-200 bg-orange-50 rounded-lg hover:border-orange-400 transition-all text-left disabled:opacity-50"
+              className="p-3 border-2 border-orange-200 bg-orange-50 rounded-lg hover:border-orange-400 transition-all text-left disabled:opacity-50"
             >
-              <Sparkles className="w-6 h-6 text-orange-600 mb-2" />
-              <h4 className="font-semibold text-gray-900 mb-1">
-                Search Supermarkets
+              <Sparkles className="w-5 h-5 text-orange-600 mb-1" />
+              <h4 className="font-semibold text-gray-900 mb-1 text-xs">
+                Search
               </h4>
-              <p className="text-sm text-gray-600">
-                Compare M&S, Waitrose, Tesco, Sainsbury's
+              <p className="text-xs text-gray-600">
+                Compare prices
               </p>
             </button>
 
             <button
               onClick={() => handleQuickAction('suggestions')}
               disabled={isLoading}
-              className="p-4 border-2 border-blue-200 bg-blue-50 rounded-lg hover:border-blue-400 transition-all text-left disabled:opacity-50"
+              className="p-3 border-2 border-blue-200 bg-blue-50 rounded-lg hover:border-blue-400 transition-all text-left disabled:opacity-50"
             >
-              <Sparkles className="w-6 h-6 text-blue-600 mb-2" />
-              <h4 className="font-semibold text-gray-900 mb-1">
-                Get Suggestions
+              <Sparkles className="w-5 h-5 text-blue-600 mb-1" />
+              <h4 className="font-semibold text-gray-900 mb-1 text-xs">
+                Suggest
               </h4>
-              <p className="text-sm text-gray-600">
-                Smart suggestions for your shopping list
+              <p className="text-xs text-gray-600">
+                Smart items
               </p>
             </button>
 
             <button
               onClick={() => handleQuickAction('budget')}
               disabled={isLoading}
-              className="p-4 border-2 border-green-200 bg-green-50 rounded-lg hover:border-green-400 transition-all text-left disabled:opacity-50"
+              className="p-3 border-2 border-green-200 bg-green-50 rounded-lg hover:border-green-400 transition-all text-left disabled:opacity-50"
             >
-              <Sparkles className="w-6 h-6 text-green-600 mb-2" />
-              <h4 className="font-semibold text-gray-900 mb-1">
-                Analyze Budget
+              <Sparkles className="w-5 h-5 text-green-600 mb-1" />
+              <h4 className="font-semibold text-gray-900 mb-1 text-xs">
+                Budget
               </h4>
-              <p className="text-sm text-gray-600">
-                Get tips to optimize your spending
+              <p className="text-xs text-gray-600">
+                Optimize spend
               </p>
             </button>
 
             <button
               onClick={() => handleQuickAction('meals')}
               disabled={isLoading}
-              className="p-4 border-2 border-purple-200 bg-purple-50 rounded-lg hover:border-purple-400 transition-all text-left disabled:opacity-50"
+              className="p-3 border-2 border-purple-200 bg-purple-50 rounded-lg hover:border-purple-400 transition-all text-left disabled:opacity-50"
             >
-              <Sparkles className="w-6 h-6 text-purple-600 mb-2" />
-              <h4 className="font-semibold text-gray-900 mb-1">
-                Meal Ideas
+              <Sparkles className="w-5 h-5 text-purple-600 mb-1" />
+              <h4 className="font-semibold text-gray-900 mb-1 text-xs">
+                Meals
               </h4>
-              <p className="text-sm text-gray-600">
-                Teen-friendly meal suggestions
+              <p className="text-xs text-gray-600">
+                Recipe ideas
               </p>
             </button>
           </div>
@@ -253,183 +236,128 @@ export function AIAssistant() {
       )}
 
       {/* Chat Messages */}
-      <div className="card">
-        <div className="h-[500px] flex flex-col">
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-            {aiMessages.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-center">
-                <div>
-                  <Bot className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Hello! I'm your AI Shopping Assistant
-                  </h3>
-                  <p className="text-gray-600 max-w-md">
-                    I can help you with shopping suggestions, budget analysis,
-                    meal planning, and price comparisons. Try the quick actions
-                    above or ask me anything!
-                  </p>
-                </div>
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {aiMessages.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-center px-2">
+              <div>
+                <Bot className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                  Hello! I'm your AI Shopping Assistant
+                </h3>
+                <p className="text-xs text-gray-600">
+                  I can help you with shopping suggestions, budget analysis,
+                  meal planning, and price comparisons. Try the quick actions
+                  above or ask me anything!
+                </p>
               </div>
-            ) : (
-              <>
-                {aiMessages.map((message) => (
+            </div>
+          ) : (
+            <>
+              {aiMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
                   <div
-                    key={message.id}
-                    className={`flex ${
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
+                    className={`flex items-start space-x-2 max-w-[85%] ${
+                      message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
                     }`}
                   >
                     <div
-                      className={`flex items-start space-x-2 max-w-[80%] ${
-                        message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                      className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        message.role === 'user'
+                          ? 'bg-blue-500'
+                          : 'bg-gradient-to-br from-purple-500 to-blue-600'
                       }`}
                     >
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      {message.role === 'user' ? (
+                        <User className="w-4 h-4 text-white" />
+                      ) : (
+                        <Bot className="w-4 h-4 text-white" />
+                      )}
+                    </div>
+
+                    <div
+                      className={`px-3 py-2 rounded-lg ${
+                        message.role === 'user'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-100 text-gray-900'
+                      }`}
+                    >
+                      <p className="text-xs whitespace-pre-wrap leading-relaxed">
+                        {message.content}
+                      </p>
+                      <p
+                        className={`text-xs mt-1 ${
                           message.role === 'user'
-                            ? 'bg-blue-500'
-                            : 'bg-gradient-to-br from-purple-500 to-blue-600'
+                            ? 'text-blue-100'
+                            : 'text-gray-500'
                         }`}
                       >
-                        {message.role === 'user' ? (
-                          <User className="w-5 h-5 text-white" />
-                        ) : (
-                          <Bot className="w-5 h-5 text-white" />
-                        )}
-                      </div>
-
-                      <div
-                        className={`px-4 py-3 rounded-lg ${
-                          message.role === 'user'
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-100 text-gray-900'
-                        }`}
-                      >
-                        <p className="text-sm whitespace-pre-wrap">
-                          {message.content}
-                        </p>
-                        <p
-                          className={`text-xs mt-1 ${
-                            message.role === 'user'
-                              ? 'text-blue-100'
-                              : 'text-gray-500'
-                          }`}
-                        >
-                          {new Date(message.timestamp).toLocaleTimeString()}
-                        </p>
-                      </div>
+                        {new Date(message.timestamp).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
                     </div>
                   </div>
-                ))}
+                </div>
+              ))}
 
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
-                        <Bot className="w-5 h-5 text-white" />
-                      </div>
-                      <div className="bg-gray-100 px-4 py-3 rounded-lg">
-                        <Loader className="w-5 h-5 text-gray-600 animate-spin" />
-                      </div>
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-7 h-7 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
+                      <Bot className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="bg-gray-100 px-3 py-2 rounded-lg">
+                      <Loader className="w-4 h-4 text-gray-600 animate-spin" />
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                <div ref={messagesEndRef} />
-              </>
-            )}
-          </div>
-
-          {/* Input */}
-          <div className="border-t border-gray-200 pt-4">
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Ask me anything about shopping, budgets, or meals..."
-                className="input-field flex-1"
-                disabled={isLoading}
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={isLoading || !input.trim()}
-                className="btn-primary px-6"
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </div>
-
-            {aiMessages.length > 0 && (
-              <button
-                onClick={() => {
-                  clearAIMessages();
-                  assistant?.clearHistory();
-                }}
-                className="text-sm text-gray-600 hover:text-gray-900 mt-2"
-              >
-                Clear conversation
-              </button>
-            )}
-          </div>
+              <div ref={messagesEndRef} />
+            </>
+          )}
         </div>
-      </div>
 
-      {/* AI Features */}
-      <div className="card bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200">
-        <h3 className="font-semibold text-gray-900 mb-4">
-          AI-First Shopping Assistant
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white">🔍</span>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">UK Supermarket Search</h4>
-              <p className="text-sm text-gray-600">
-                Search and compare prices across M&S, Waitrose, Tesco, and Sainsbury's
-              </p>
-            </div>
+        {/* Input */}
+        <div className="border-t border-gray-200 p-3 bg-gray-50">
+          <div className="flex space-x-2 mb-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask about shopping, budget, meals..."
+              className="input-field flex-1 text-sm"
+              disabled={isLoading}
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={isLoading || !input.trim()}
+              className="btn-primary px-4"
+            >
+              <Send className="w-4 h-4" />
+            </button>
           </div>
 
-          <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white">🧮</span>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">Budget Calculator</h4>
-              <p className="text-sm text-gray-600">
-                Code interpreter for complex budget calculations and spending predictions
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white">📊</span>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">List Analysis</h4>
-              <p className="text-sm text-gray-600">
-                Analyze shopping list for budget, health, and optimization opportunities
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white">💡</span>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">Smart Suggestions</h4>
-              <p className="text-sm text-gray-600">
-                AI-powered item suggestions based on family patterns and preferences
-              </p>
-            </div>
-          </div>
+          {aiMessages.length > 0 && (
+            <button
+              onClick={() => {
+                clearAIMessages();
+                assistant?.clearHistory();
+              }}
+              className="text-xs text-gray-600 hover:text-gray-900"
+            >
+              Clear conversation
+            </button>
+          )}
         </div>
       </div>
     </div>
