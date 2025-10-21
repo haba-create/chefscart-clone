@@ -21,8 +21,8 @@ export interface UserPreferences {
   notifications: boolean;
 }
 
-// Shopping List Types
-export interface ShoppingItem {
+// Trolley Types (Shopping Cart)
+export interface TrolleyItem {
   id: string;
   name: string;
   quantity: number;
@@ -38,17 +38,45 @@ export interface ShoppingItem {
   urgency: 'low' | 'medium' | 'high';
 }
 
+// Legacy alias for backwards compatibility (will be removed)
+export type ShoppingItem = TrolleyItem;
+
 export interface ItemVote {
   userId: string;
   vote: 'approve' | 'reject' | 'neutral';
 }
 
-export interface ShoppingList {
+export interface Trolley {
   id: string;
-  items: ShoppingItem[];
+  items: TrolleyItem[];
   lastUpdated: Date;
   totalEstimatedCost: number;
   budgetRemaining: number;
+}
+
+// Legacy alias for backwards compatibility (will be removed)
+export type ShoppingList = Trolley;
+
+// Purchase History Types
+export interface PurchasedItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  category: string;
+  price: number;
+  store: string;
+  purchasedBy: string;
+  purchasedAt: Date;
+  addedBy: string;
+  notes?: string;
+}
+
+export interface PurchaseHistory {
+  id: string;
+  purchases: PurchasedItem[];
+  lastUpdated: Date;
+  totalSpent: number;
 }
 
 // Gamification Types
@@ -163,8 +191,8 @@ export interface AIMessage {
 
 export interface AIContext {
   currentBudget?: number;
-  shoppingList?: ShoppingItem[];
-  recentPurchases?: ShoppingItem[];
+  trolley?: TrolleyItem[];
+  recentPurchases?: PurchasedItem[];
   userPreferences?: UserPreferences;
 }
 

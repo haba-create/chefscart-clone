@@ -5,12 +5,12 @@ import { Send, Bot, User, Loader, Sparkles } from 'lucide-react';
 
 export function AIAssistant() {
   const currentUser = useStore((state) => state.currentUser);
-  const shoppingList = useStore((state) => state.shoppingList);
+  const trolley = useStore((state) => state.trolley);
   const users = useStore((state) => state.users);
   const aiMessages = useStore((state) => state.aiMessages);
   const addAIMessage = useStore((state) => state.addAIMessage);
   const clearAIMessages = useStore((state) => state.clearAIMessages);
-  const addShoppingItem = useStore((state) => state.addShoppingItem);
+  const addTrolleyItem = useStore((state) => state.addTrolleyItem);
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,18 +32,18 @@ export function AIAssistant() {
     }
   }, []);
 
-  // Update assistant context when user or shopping list changes
+  // Update assistant context when user or trolley changes
   useEffect(() => {
     if (assistant && currentUser) {
       assistant.setContext({
         currentUser,
         users,
-        shoppingList: shoppingList.items,
+        trolley: trolley.items,
         budget: currentUser.monthlyBudget - currentUser.currentSpent,
-        addItem: addShoppingItem,
+        addItem: addTrolleyItem,
       });
     }
-  }, [assistant, currentUser, users, shoppingList, addShoppingItem]);
+  }, [assistant, currentUser, users, trolley, addTrolleyItem]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

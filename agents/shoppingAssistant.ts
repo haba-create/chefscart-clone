@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { ShoppingItem, User } from '../src/types';
+import type { TrolleyItem, User } from '../src/types';
 import { searchGroceries, type GroceryItem } from '../src/data/groceries';
 
 /**
@@ -7,19 +7,19 @@ import { searchGroceries, type GroceryItem } from '../src/data/groceries';
  *
  * Capabilities:
  * - Budget calculations and analysis
- * - UK supermarket price comparisons
- * - Shopping list optimization
+ * - UK supermarket price comparisons (with real-time web search planned)
+ * - Trolley optimization
  * - Consumption pattern analysis
  * - Intelligent recommendations
- * - Add items to shopping list from research
+ * - Add items to trolley from research
  */
 
 interface ShoppingContext {
   currentUser: User;
   users: User[];
-  shoppingList: ShoppingItem[];
+  trolley: TrolleyItem[];
   budget: number;
-  addItem?: (item: Omit<ShoppingItem, 'id'>) => void;
+  addItem?: (item: Omit<TrolleyItem, 'id' | 'addedAt' | 'votes'>) => void;
 }
 
 // Define tools for the AI agent
@@ -309,7 +309,7 @@ export class ShoppingAssistantAgent {
           familyBudget: this.context.currentUser.monthlyBudget,
           spent: this.context.currentUser.currentSpent,
           remaining: this.context.currentUser.monthlyBudget - this.context.currentUser.currentSpent,
-          itemCount: this.context.shoppingList.length,
+          itemCount: this.context.trolley.length,
         };
       }
 
@@ -387,18 +387,18 @@ export class ShoppingAssistantAgent {
       return { error: 'No shopping context available' };
     }
 
-    const { shoppingList, currentUser } = this.context;
+    const { trolley, currentUser } = this.context;
     const budgetRemaining = currentUser.monthlyBudget - currentUser.currentSpent;
     const familyBudget = currentUser.monthlyBudget;
 
     const analysis: any = {
       focus,
-      itemCount: shoppingList.length,
+      itemCount: trolley.length,
       insights: [],
     };
 
     if (focus === 'budget') {
-      const totalCost = shoppingList.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0);
+      const totalCost = trolley.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0);
       analysis.totalCost = totalCost.toFixed(2);
       analysis.budgetImpact = ((totalCost / familyBudget) * 100).toFixed(2);
       analysis.insights.push(`Shopping list costs £${analysis.totalCost} (${analysis.budgetImpact}% of budget)`);
@@ -409,7 +409,7 @@ export class ShoppingAssistantAgent {
     }
 
     if (focus === 'health') {
-      const categories = shoppingList.reduce((acc: any, item) => {
+      const categories = trolley.reduce((acc: any, item) => {
         acc[item.category] = (acc[item.category] || 0) + 1;
         return acc;
       }, {});
@@ -421,7 +421,7 @@ export class ShoppingAssistantAgent {
     if (focus === 'completeness') {
       const essentials = ['Milk', 'Bread', 'Eggs', 'Fresh produce', 'Protein'];
       const hasEssentials = essentials.filter(essential =>
-        shoppingList.some(item => item.name.toLowerCase().includes(essential.toLowerCase()))
+        trolley.some(item => item.name.toLowerCase().includes(essential.toLowerCase()))
       );
 
       analysis.hasEssentials = hasEssentials;
@@ -527,8 +527,8 @@ export class ShoppingAssistantAgent {
       }
     }
 
-    // Create shopping item
-    const newItem: Omit<ShoppingItem, 'id'> = {
+    // Create trolley item
+    const newItem: Omit<TrolleyItem, 'id' | 'addedAt' | 'votes'> = {
       name: groceryItem.name,
       quantity,
       unit: groceryItem.unit,
@@ -536,9 +536,7 @@ export class ShoppingAssistantAgent {
       price,
       store,
       addedBy: this.context.currentUser.id,
-      addedAt: new Date(),
       purchased: false,
-      votes: [],
       urgency: 'medium',
     };
 
@@ -575,7 +573,7 @@ export class ShoppingAssistantAgent {
       return 'You are a helpful AI shopping assistant.';
     }
 
-    const { currentUser, shoppingList } = this.context;
+    const { currentUser, trolley } = this.context;
     const familyBudget = currentUser.monthlyBudget;
     const budgetSpent = currentUser.currentSpent;
     const budgetRemaining = currentUser.monthlyBudget - currentUser.currentSpent;
@@ -595,8 +593,8 @@ BUDGET:
 - Family Budget: £${familyBudget.toFixed(2)}/month (one pot for everything)
 - Spent: £${budgetSpent.toFixed(2)}
 - Remaining: £${budgetRemaining.toFixed(2)}
-- Shopping List Items: ${shoppingList.length}
-- Estimated List Cost: £${shoppingList.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0).toFixed(2)}
+- Shopping List Items: ${trolley.length}
+- Estimated List Cost: £${trolley.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0).toFixed(2)}
 
 UK SUPERMARKETS (Priority order):
 1. M&S (Marks & Spencer) - Premium quality

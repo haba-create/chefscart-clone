@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useStore } from './store';
 import { Header } from '@components/Header';
-import { ShoppingList } from '@components/ShoppingList';
+import { Trolley } from '@components/Trolley';
 import { BudgetTracker } from '@components/BudgetTracker';
 import { Gamification } from '@components/Gamification';
 import { AIAssistant } from '@components/AIAssistant';
 import { MealPlanner } from '@components/MealPlanner';
 import { UserSwitcher } from '@components/UserSwitcher';
 
-type MainTab = 'shopping' | 'budget' | 'gamification' | 'meals';
+type MainTab = 'trolley' | 'budget' | 'gamification' | 'meals';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<MainTab>('shopping');
+  const [activeTab, setActiveTab] = useState<MainTab>('trolley');
   const currentUser = useStore((state) => state.currentUser);
 
   if (!currentUser) {
@@ -58,10 +58,10 @@ function App() {
           <div className="bg-white border-b border-gray-200 px-6 py-3">
             <div className="flex space-x-1">
               <TabButton
-                active={activeTab === 'shopping'}
-                onClick={() => setActiveTab('shopping')}
+                active={activeTab === 'trolley'}
+                onClick={() => setActiveTab('trolley')}
                 icon="🛒"
-                label="Shopping List"
+                label="Trolley"
               />
               <TabButton
                 active={activeTab === 'meals'}
@@ -87,7 +87,7 @@ function App() {
           {/* Main Content Area */}
           <div className="flex-1 overflow-auto bg-gray-50 p-6">
             <div className="max-w-6xl mx-auto">
-              {activeTab === 'shopping' && <ShoppingList />}
+              {activeTab === 'trolley' && <Trolley />}
               {activeTab === 'budget' && <BudgetTracker />}
               {activeTab === 'gamification' && <Gamification />}
               {activeTab === 'meals' && <MealPlanner />}

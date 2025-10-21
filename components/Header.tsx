@@ -4,11 +4,11 @@ import { Bell, ShoppingCart, TrendingUp } from 'lucide-react';
 export function Header() {
   const currentUser = useStore((state) => state.currentUser);
   const notifications = useStore((state) => state.notifications);
-  const shoppingList = useStore((state) => state.shoppingList);
+  const trolley = useStore((state) => state.trolley);
 
   const unreadNotifications = notifications.filter((n) => !n.read).length;
-  const totalItems = shoppingList.items.length;
-  const purchasedItems = shoppingList.items.filter((i) => i.purchased).length;
+  const totalItems = trolley.items.length;
+  const purchasedItems = trolley.items.filter((i) => i.purchased).length;
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -39,7 +39,7 @@ export function Header() {
             <div className="hidden md:flex items-center space-x-2 text-sm">
               <TrendingUp className="w-4 h-4 text-green-600" />
               <span className="text-gray-600">
-                £{shoppingList.budgetRemaining.toFixed(2)} left
+                £{trolley.budgetRemaining.toFixed(2)} left
               </span>
             </div>
 

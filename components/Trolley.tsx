@@ -7,15 +7,15 @@ import {
   ThumbsUp,
   ThumbsDown,
   MessageSquare,
-  AlertCircle,
+  ShoppingCart,
 } from 'lucide-react';
-import type { ShoppingItem } from '../src/types';
+import type { TrolleyItem } from '../src/types';
 
-export function ShoppingList() {
+export function Trolley() {
   const currentUser = useStore((state) => state.currentUser);
-  const shoppingList = useStore((state) => state.shoppingList);
-  const addShoppingItem = useStore((state) => state.addShoppingItem);
-  const removeShoppingItem = useStore((state) => state.removeShoppingItem);
+  const trolley = useStore((state) => state.trolley);
+  const addTrolleyItem = useStore((state) => state.addTrolleyItem);
+  const removeTrolleyItem = useStore((state) => state.removeTrolleyItem);
   const toggleItemPurchased = useStore((state) => state.toggleItemPurchased);
   const voteOnItem = useStore((state) => state.voteOnItem);
   const addPoints = useStore((state) => state.addPoints);
@@ -27,13 +27,14 @@ export function ShoppingList() {
     unit: 'items',
     category: 'Other',
     price: 0,
+    store: '',
     urgency: 'medium' as const,
   });
 
   const handleAddItem = () => {
     if (!currentUser || !newItem.name) return;
 
-    addShoppingItem({
+    addTrolleyItem({
       ...newItem,
       addedBy: currentUser.id,
       purchased: false,
@@ -49,6 +50,7 @@ export function ShoppingList() {
       unit: 'items',
       category: 'Other',
       price: 0,
+      store: '',
       urgency: 'medium',
     });
     setShowAddForm(false);
@@ -69,13 +71,13 @@ export function ShoppingList() {
     voteOnItem(itemId, currentUser.id, vote);
   };
 
-  const getVoteSummary = (item: ShoppingItem) => {
+  const getVoteSummary = (item: TrolleyItem) => {
     const approves = item.votes.filter((v) => v.vote === 'approve').length;
     const rejects = item.votes.filter((v) => v.vote === 'reject').length;
     return { approves, rejects };
   };
 
-  const getUserVote = (item: ShoppingItem) => {
+  const getUserVote = (item: TrolleyItem) => {
     if (!currentUser) return null;
     return item.votes.find((v) => v.userId === currentUser.id);
   };
@@ -98,18 +100,22 @@ export function ShoppingList() {
     high: 'bg-red-100 text-red-600',
   };
 
-  const purchasedItems = shoppingList.items.filter((item) => item.purchased);
-  const unpurchasedItems = shoppingList.items.filter((item) => !item.purchased);
+  const purchasedItems = trolley.items.filter((item) => item.purchased);
+  const unpurchasedItems = trolley.items.filter((item) => !item.purchased);
 
   return (
     <div className="space-y-6">
       {/* Summary Card */}
       <div className="card">
+        <div className="flex items-center space-x-3 mb-4">
+          <ShoppingCart className="w-6 h-6 text-primary-600" />
+          <h2 className="text-xl font-bold text-gray-900">Shopping Trolley</h2>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-sm text-gray-600">Total Items</p>
             <p className="text-2xl font-bold text-gray-900">
-              {shoppingList.items.length}
+              {trolley.items.length}
             </p>
           </div>
           <div>
@@ -121,13 +127,13 @@ export function ShoppingList() {
           <div>
             <p className="text-sm text-gray-600">Estimated Cost</p>
             <p className="text-2xl font-bold text-blue-600">
-              £{shoppingList.totalEstimatedCost.toFixed(2)}
+              £{trolley.totalEstimatedCost.toFixed(2)}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Budget Left</p>
             <p className="text-2xl font-bold text-purple-600">
-              £{shoppingList.budgetRemaining.toFixed(2)}
+              £{trolley.budgetRemaining.toFixed(2)}
             </p>
           </div>
         </div>
@@ -141,7 +147,7 @@ export function ShoppingList() {
             className="w-full btn-primary flex items-center justify-center space-x-2"
           >
             <Plus className="w-5 h-5" />
-            <span>Add Item to Shopping List</span>
+            <span>Add Item to Trolley</span>
           </button>
         ) : (
           <div className="space-y-4">
@@ -234,6 +240,24 @@ export function ShoppingList() {
                   className="input-field"
                 />
               </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Store (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={newItem.store}
+                  onChange={(e) =>
+                    setNewItem({ ...newItem, store: e.target.value })
+                  }
+                  placeholder="e.g., Tesco, Sainsbury's, Ocado"
+                  className="input-field"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Tip: Ask the AI Assistant to find the best prices across supermarkets!
+                </p>
+              </div>
             </div>
 
             <div className="flex space-x-3">
@@ -251,7 +275,7 @@ export function ShoppingList() {
         )}
       </div>
 
-      {/* Shopping Items */}
+      {/* Trolley Items */}
       {unpurchasedItems.length > 0 && (
         <div className="card">
           <h3 className="font-semibold text-gray-900 mb-4 flex items-center space-x-2">
@@ -280,16 +304,24 @@ export function ShoppingList() {
                           )}
                         </button>
 
-                        <div>
+                        <div className="flex-1">
                           <h4 className="font-semibold text-gray-900">
                             {item.name}
                           </h4>
-                          <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
+                          <div className="flex items-center flex-wrap space-x-2 text-sm text-gray-600 mt-1">
                             <span>
                               {item.quantity} {item.unit}
                             </span>
                             <span>•</span>
                             <span>{item.category}</span>
+                            {item.store && (
+                              <>
+                                <span>•</span>
+                                <span className="text-primary-600 font-medium">
+                                  {item.store}
+                                </span>
+                              </>
+                            )}
                             {item.price && (
                               <>
                                 <span>•</span>
@@ -346,7 +378,7 @@ export function ShoppingList() {
                     </div>
 
                     <button
-                      onClick={() => removeShoppingItem(item.id)}
+                      onClick={() => removeTrolleyItem(item.id)}
                       className="text-gray-400 hover:text-red-600 transition-colors p-2"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -386,6 +418,7 @@ export function ShoppingList() {
                     </p>
                     <p className="text-sm text-gray-600">
                       {item.quantity} {item.unit}
+                      {item.store && ` • ${item.store}`}
                     </p>
                   </div>
                 </div>
@@ -401,11 +434,11 @@ export function ShoppingList() {
       )}
 
       {/* Empty State */}
-      {shoppingList.items.length === 0 && (
+      {trolley.items.length === 0 && (
         <div className="card text-center py-12">
-          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <ShoppingCart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No items in your shopping list
+            Your trolley is empty
           </h3>
           <p className="text-gray-600 mb-6">
             Start adding items to plan your grocery shopping!
