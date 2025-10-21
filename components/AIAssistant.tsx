@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../src/store';
 import { createShoppingAssistant } from '@agents/shoppingAssistant';
 import { Send, Bot, User, Loader, Sparkles } from 'lucide-react';
@@ -17,8 +17,6 @@ export function AIAssistant() {
   const [assistant, setAssistant] = useState<ReturnType<
     typeof createShoppingAssistant
   > | null>(null);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize assistant from environment variable on mount
   useEffect(() => {
@@ -44,10 +42,6 @@ export function AIAssistant() {
       });
     }
   }, [assistant, currentUser, users, trolley, addTrolleyItem]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [aiMessages]);
 
   const handleSendMessage = async () => {
     if (!input.trim() || !currentUser) return;
@@ -171,9 +165,9 @@ export function AIAssistant() {
 
   return (
     <div className="h-full flex flex-col bg-white">
-      {/* Quick Actions - Compact for Sidebar */}
+      {/* Quick Actions - Compact for Sidebar - Only show when no messages */}
       {aiMessages.length === 0 && (
-        <div className="p-4 border-b border-gray-200">
+        <div className="flex-shrink-0 p-4 border-b border-gray-200">
           <h3 className="font-semibold text-gray-900 mb-3 text-sm">Quick Actions</h3>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -235,99 +229,101 @@ export function AIAssistant() {
         </div>
       )}
 
-      {/* Chat Messages */}
+      {/* Chat Messages Container - Flexbox with proper scrolling */}
       <div className="flex-1 flex flex-col min-h-0">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {aiMessages.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-center px-2">
-              <div>
-                <Bot className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                  Hello! I'm your AI Shopping Assistant
-                </h3>
-                <p className="text-xs text-gray-600">
-                  I can help you with shopping suggestions, budget analysis,
-                  meal planning, and price comparisons. Try the quick actions
-                  above or ask me anything!
-                </p>
+        {/* Messages - Using flex-direction: column-reverse for auto-scroll to bottom */}
+        <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col-reverse">
+          <div className="flex flex-col-reverse gap-3">
+            {aiMessages.length === 0 ? (
+              <div className="flex items-center justify-center text-center px-2 py-8">
+                <div>
+                  <Bot className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                    Hello! I'm your AI Shopping Assistant
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    I can help you with shopping suggestions, budget analysis,
+                    meal planning, and price comparisons. Try the quick actions
+                    above or ask me anything!
+                  </p>
+                </div>
               </div>
-            </div>
-          ) : (
-            <>
-              {aiMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
+            ) : (
+              <>
+                {/* Loading indicator at bottom (shows first due to column-reverse) */}
+                {isLoading && (
+                  <div className="flex justify-start mb-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-7 h-7 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
+                        <Bot className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="bg-gray-100 px-3 py-2 rounded-lg">
+                        <Loader className="w-4 h-4 text-gray-600 animate-spin" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Messages in reverse order for column-reverse layout */}
+                {[...aiMessages].reverse().map((message) => (
                   <div
-                    className={`flex items-start space-x-2 max-w-[85%] ${
-                      message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                    key={message.id}
+                    className={`flex ${
+                      message.role === 'user' ? 'justify-end' : 'justify-start'
                     }`}
                   >
                     <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        message.role === 'user'
-                          ? 'bg-blue-500'
-                          : 'bg-gradient-to-br from-purple-500 to-blue-600'
+                      className={`flex items-start space-x-2 max-w-[85%] ${
+                        message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
                       }`}
                     >
-                      {message.role === 'user' ? (
-                        <User className="w-4 h-4 text-white" />
-                      ) : (
-                        <Bot className="w-4 h-4 text-white" />
-                      )}
-                    </div>
-
-                    <div
-                      className={`px-3 py-2 rounded-lg ${
-                        message.role === 'user'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
-                    >
-                      <p className="text-xs whitespace-pre-wrap leading-relaxed">
-                        {message.content}
-                      </p>
-                      <p
-                        className={`text-xs mt-1 ${
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
                           message.role === 'user'
-                            ? 'text-blue-100'
-                            : 'text-gray-500'
+                            ? 'bg-blue-500'
+                            : 'bg-gradient-to-br from-purple-500 to-blue-600'
                         }`}
                       >
-                        {new Date(message.timestamp).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
+                        {message.role === 'user' ? (
+                          <User className="w-4 h-4 text-white" />
+                        ) : (
+                          <Bot className="w-4 h-4 text-white" />
+                        )}
+                      </div>
+
+                      <div
+                        className={`px-3 py-2 rounded-lg ${
+                          message.role === 'user'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-100 text-gray-900'
+                        }`}
+                      >
+                        <p className="text-xs whitespace-pre-wrap leading-relaxed">
+                          {message.content}
+                        </p>
+                        <p
+                          className={`text-xs mt-1 ${
+                            message.role === 'user'
+                              ? 'text-blue-100'
+                              : 'text-gray-500'
+                          }`}
+                        >
+                          {new Date(message.timestamp).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-7 h-7 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
-                      <Bot className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="bg-gray-100 px-3 py-2 rounded-lg">
-                      <Loader className="w-4 h-4 text-gray-600 animate-spin" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </>
-          )}
+                ))}
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Input */}
-        <div className="border-t border-gray-200 p-3 bg-gray-50">
+        {/* Input - Fixed at bottom */}
+        <div className="flex-shrink-0 border-t border-gray-200 p-3 bg-gray-50">
           <div className="flex space-x-2 mb-2">
             <input
               type="text"
