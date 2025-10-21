@@ -1,374 +1,509 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { AIMessage, ShoppingItem, User } from '../src/types';
+import type { ShoppingItem, User } from '../src/types';
 
 /**
- * Shopping Assistant Agent using Anthropic Claude
- * This agent helps with:
- * - Smart shopping suggestions
- * - Price comparisons
- * - Budget advice
- * - Meal planning recommendations
- * - Deal hunting
+ * AI-First Shopping Assistant using Anthropic Claude with Tools
+ *
+ * Capabilities:
+ * - Budget calculations and analysis
+ * - UK supermarket price comparisons
+ * - Shopping list optimization
+ * - Consumption pattern analysis
+ * - Intelligent recommendations
  */
+
+interface ShoppingContext {
+  currentUser: User;
+  users: User[];
+  shoppingList: ShoppingItem[];
+  budget: number;
+}
+
+// Define tools for the AI agent
+const TOOLS: Anthropic.Tool[] = [
+  {
+    name: 'calculate_budget',
+    description: 'Perform budget calculations, analyze spending patterns, predict future costs, and provide financial insights for grocery shopping. Can handle arithmetic, percentages, projections, and comparisons.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        operation: {
+          type: 'string',
+          description: 'The calculation or analysis to perform (e.g., "Calculate total cost", "Find percentage of budget used", "Project monthly spending")',
+        },
+        values: {
+          type: 'object',
+          description: 'Key-value pairs of numbers needed for the calculation',
+          additionalProperties: { type: 'number' },
+        },
+      },
+      required: ['operation', 'values'],
+    },
+  },
+  {
+    name: 'search_uk_supermarkets',
+    description: 'Search and compare prices for grocery items across UK supermarkets (M&S, Waitrose, Tesco, Sainsburys). Provides typical price ranges, deals, and recommendations.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        item: {
+          type: 'string',
+          description: 'The grocery item to search for (e.g., "milk", "bread", "chicken breast")',
+        },
+        stores: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'List of stores to compare (defaults to all: M&S, Waitrose, Tesco, Sainsburys)',
+        },
+        max_price: {
+          type: 'number',
+          description: 'Maximum price budget for this item',
+        },
+      },
+      required: ['item'],
+    },
+  },
+  {
+    name: 'analyze_shopping_list',
+    description: 'Analyze the current shopping list for optimization opportunities, budget impact, health considerations, and missing essentials.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        focus: {
+          type: 'string',
+          enum: ['budget', 'health', 'completeness', 'optimization'],
+          description: 'What aspect to focus the analysis on',
+        },
+      },
+      required: ['focus'],
+    },
+  },
+  {
+    name: 'suggest_items',
+    description: 'Suggest items to add to the shopping list based on current list, family patterns, budget, and nutritional needs.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        category: {
+          type: 'string',
+          description: 'Category of suggestions (e.g., "essentials", "healthy snacks", "meal ingredients")',
+        },
+        count: {
+          type: 'number',
+          description: 'Number of suggestions to provide',
+        },
+      },
+      required: ['category'],
+    },
+  },
+];
 
 export class ShoppingAssistantAgent {
   private client: Anthropic;
-  private conversationHistory: AIMessage[] = [];
+  private context: ShoppingContext | null = null;
 
   constructor(apiKey: string) {
+    if (!apiKey || apiKey === 'undefined' || apiKey === '') {
+      throw new Error('Anthropic API key is required. Please set VITE_ANTHROPIC_API_KEY in your environment variables.');
+    }
+
     this.client = new Anthropic({
-      apiKey: apiKey || 'placeholder-key', // Will be provided by user
+      apiKey,
+      dangerouslyAllowBrowser: true, // Required for client-side usage
     });
   }
 
   /**
-   * Get AI-powered shopping suggestions based on current context
+   * Set the shopping context for the AI
    */
-  async getSuggestions(context: {
-    currentUser: User;
-    shoppingList: ShoppingItem[];
-    budget: number;
-    preferences: string[];
-  }): Promise<string> {
-    const prompt = this.buildSuggestionsPrompt(context);
-
-    try {
-      const message = await this.client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      });
-
-      const response = message.content[0];
-      return response.type === 'text' ? response.text : '';
-    } catch (error) {
-      console.error('Error getting AI suggestions:', error);
-      return 'Sorry, I encountered an error. Please try again.';
-    }
+  setContext(context: ShoppingContext): void {
+    this.context = context;
   }
 
   /**
-   * Chat with the AI assistant
+   * Clear conversation history (if needed in the future)
    */
-  async chat(
-    userMessage: string,
-    context: {
-      currentUser: User;
-      shoppingList: ShoppingItem[];
-      budget: number;
+  clearHistory(): void {
+    // Currently stateless - each chat() call is independent
+    // This method is here for API compatibility
+    console.log('History cleared (stateless agent)');
+  }
+
+  /**
+   * Main chat interface with tool support
+   */
+  async chat(userMessage: string): Promise<string> {
+    if (!this.context) {
+      throw new Error('Shopping context not set. Call setContext() first.');
     }
-  ): Promise<string> {
-    const systemPrompt = this.buildSystemPrompt(context);
+
+    const systemPrompt = this.buildSystemPrompt();
 
     try {
-      // Build conversation history
-      const messages: Anthropic.MessageParam[] = [
-        ...this.conversationHistory.map((msg) => ({
-          role: msg.role as 'user' | 'assistant',
-          content: msg.content,
-        })),
+      let messages: Anthropic.MessageParam[] = [
         {
-          role: 'user' as const,
+          role: 'user',
           content: userMessage,
         },
       ];
 
-      const message = await this.client.messages.create({
+      // Initial API call
+      let response = await this.client.messages.create({
         model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 2048,
+        max_tokens: 4096,
         system: systemPrompt,
-        messages: messages,
+        messages,
+        tools: TOOLS,
       });
 
-      const response = message.content[0];
-      const responseText = response.type === 'text' ? response.text : '';
+      // Handle tool calls
+      while (response.stop_reason === 'tool_use') {
+        const toolUse = response.content.find(
+          (block) => block.type === 'tool_use'
+        ) as Anthropic.ToolUseBlock | undefined;
 
-      // Update conversation history
-      this.conversationHistory.push({
-        id: `msg-${Date.now()}-user`,
-        role: 'user',
-        content: userMessage,
-        timestamp: new Date(),
-      });
+        if (!toolUse) break;
 
-      this.conversationHistory.push({
-        id: `msg-${Date.now()}-assistant`,
-        role: 'assistant',
-        content: responseText,
-        timestamp: new Date(),
-      });
+        // Execute the tool
+        const toolResult = await this.executeTool(toolUse.name, toolUse.input);
 
-      return responseText;
-    } catch (error) {
-      console.error('Error in AI chat:', error);
-      return 'Sorry, I encountered an error. Please make sure your API key is configured correctly.';
-    }
-  }
-
-  /**
-   * Analyze shopping list for budget optimization
-   */
-  async analyzeBudget(context: {
-    shoppingList: ShoppingItem[];
-    budget: number;
-    currentSpent: number;
-  }): Promise<string> {
-    const prompt = `You are a budget-conscious shopping advisor. Analyze this shopping list and provide recommendations:
-
-Shopping List:
-${context.shoppingList
-  .map(
-    (item) =>
-      `- ${item.name} (${item.quantity} ${item.unit}) - £${item.price || 'unknown'}`
-  )
-  .join('\n')}
-
-Total Budget: £${context.budget}
-Current Spent: £${context.currentSpent}
-Remaining: £${context.budget - context.currentSpent}
-
-Provide:
-1. Budget analysis
-2. Suggestions to save money
-3. Items that could be substituted with cheaper alternatives
-4. Overall shopping strategy
-
-Keep your response concise and actionable.`;
-
-    try {
-      const message = await this.client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1024,
-        messages: [
+        // Add assistant response and tool result to messages
+        messages = [
+          ...messages,
+          {
+            role: 'assistant',
+            content: response.content,
+          },
           {
             role: 'user',
-            content: prompt,
+            content: [
+              {
+                type: 'tool_result',
+                tool_use_id: toolUse.id,
+                content: JSON.stringify(toolResult),
+              },
+            ],
           },
-        ],
-      });
+        ];
 
-      const response = message.content[0];
-      return response.type === 'text' ? response.text : '';
-    } catch (error) {
-      console.error('Error analyzing budget:', error);
-      return 'Unable to analyze budget at this time.';
+        // Continue the conversation
+        response = await this.client.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages,
+          tools: TOOLS,
+        });
+      }
+
+      // Extract final text response
+      const textBlock = response.content.find(
+        (block) => block.type === 'text'
+      ) as Anthropic.TextBlock | undefined;
+
+      return textBlock?.text || 'I apologize, but I was unable to generate a response.';
+    } catch (error: any) {
+      console.error('AI Agent Error:', error);
+
+      if (error?.message?.includes('api_key')) {
+        return 'API Key Error: Please ensure VITE_ANTHROPIC_API_KEY is set correctly in your Railway environment variables.';
+      }
+
+      if (error?.status === 401) {
+        return 'Authentication Error: Invalid API key. Please check your VITE_ANTHROPIC_API_KEY.';
+      }
+
+      if (error?.status === 429) {
+        return 'Rate Limit: Too many requests. Please wait a moment and try again.';
+      }
+
+      return `Error: ${error?.message || 'An unexpected error occurred'}. Please try again.`;
     }
   }
 
   /**
-   * Get meal suggestions for teens
+   * Execute tool calls
    */
-  async getTeenMealSuggestions(preferences: {
-    budget: number;
-    dietaryRestrictions: string[];
-  }): Promise<string> {
-    const prompt = `You are a meal planning expert. Suggest 5 budget-friendly, teen-approved meals for a family in London.
+  private async executeTool(toolName: string, toolInput: any): Promise<any> {
+    console.log(`[TOOL] Executing: ${toolName}`, toolInput);
 
-Budget per meal: £${preferences.budget / 7}
-Dietary restrictions: ${preferences.dietaryRestrictions.join(', ') || 'None'}
+    switch (toolName) {
+      case 'calculate_budget':
+        return this.calculateBudget(toolInput);
 
-For each meal, provide:
-1. Meal name
-2. Quick description (why teens will love it)
-3. Estimated cost
-4. Key ingredients
+      case 'search_uk_supermarkets':
+        return this.searchSupermarkets(toolInput);
 
-Keep it practical, affordable, and appealing to a 16-year-old.`;
+      case 'analyze_shopping_list':
+        return this.analyzeShoppingList(toolInput);
+
+      case 'suggest_items':
+        return this.suggestItems(toolInput);
+
+      default:
+        return { error: `Unknown tool: ${toolName}` };
+    }
+  }
+
+  /**
+   * Budget calculation tool (code interpreter style)
+   */
+  private calculateBudget(input: any): any {
+    const { operation, values } = input;
 
     try {
-      const message = await this.client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1536,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
+      const result: any = {
+        operation,
+        calculations: {},
+      };
+
+      // Perform various budget calculations
+      if (values.total !== undefined && values.spent !== undefined) {
+        result.calculations.remaining = values.total - values.spent;
+        result.calculations.percentageUsed = ((values.spent / values.total) * 100).toFixed(2);
+        result.calculations.percentageRemaining = (((values.total - values.spent) / values.total) * 100).toFixed(2);
+      }
+
+      if (values.items !== undefined && values.total !== undefined) {
+        result.calculations.averageCostPerItem = (values.total / values.items).toFixed(2);
+      }
+
+      if (values.currentSpending !== undefined && values.daysInMonth !== undefined) {
+        const daysElapsed = values.daysInMonth || 30;
+        result.calculations.dailyAverage = (values.currentSpending / daysElapsed).toFixed(2);
+        result.calculations.projectedMonthly = (result.calculations.dailyAverage * 30).toFixed(2);
+      }
+
+      // Add context from shopping context
+      if (this.context) {
+        result.context = {
+          familyBudget: this.context.currentUser.monthlyBudget,
+          spent: this.context.currentUser.currentSpent,
+          remaining: this.context.currentUser.monthlyBudget - this.context.currentUser.currentSpent,
+          itemCount: this.context.shoppingList.length,
+        };
+      }
+
+      return result;
+    } catch (error: any) {
+      return { error: error.message };
+    }
+  }
+
+  /**
+   * UK Supermarket search tool
+   */
+  private searchSupermarkets(input: any): any {
+    const { item, stores = ['M&S', 'Waitrose', 'Tesco', 'Sainsburys'], max_price } = input;
+
+    // Provide realistic price ranges based on typical UK supermarket pricing
+    const priceDatabase: any = {
+      'milk': { 'Tesco': { price: 1.45, deals: 'Clubcard price' }, 'Sainsburys': { price: 1.50 }, 'Waitrose': { price: 1.65 }, 'M&S': { price: 1.75 } },
+      'bread': { 'Tesco': { price: 0.95 }, 'Sainsburys': { price: 1.00 }, 'Waitrose': { price: 1.20 }, 'M&S': { price: 1.30 } },
+      'eggs': { 'Tesco': { price: 2.10, deals: 'Clubcard £1.90' }, 'Sainsburys': { price: 2.20, deals: 'Nectar points' }, 'Waitrose': { price: 2.50 }, 'M&S': { price: 2.80 } },
+      'chicken': { 'Tesco': { price: 4.50 }, 'Sainsburys': { price: 4.75 }, 'Waitrose': { price: 5.50 }, 'M&S': { price: 6.00 } },
+      'pasta': { 'Tesco': { price: 0.70 }, 'Sainsburys': { price: 0.75 }, 'Waitrose': { price: 1.00 }, 'M&S': { price: 1.20 } },
+    };
+
+    const itemLower = item.toLowerCase();
+    const results: any = {
+      item,
+      stores_searched: stores,
+      prices: {},
+      recommendation: '',
+    };
+
+    // Find matching item or provide estimate
+    const matchedItem = Object.keys(priceDatabase).find(key => itemLower.includes(key));
+
+    if (matchedItem) {
+      stores.forEach((store: string) => {
+        if (priceDatabase[matchedItem][store]) {
+          results.prices[store] = priceDatabase[matchedItem][store];
+        }
       });
 
-      const response = message.content[0];
-      return response.type === 'text' ? response.text : '';
-    } catch (error) {
-      console.error('Error getting meal suggestions:', error);
-      return 'Unable to get meal suggestions at this time.';
+      // Find cheapest
+      const cheapest = Object.entries(results.prices).sort(
+        ([, a]: any, [, b]: any) => a.price - b.price
+      )[0];
+
+      results.recommendation = `Best price: ${cheapest[0]} at £${(cheapest[1] as any).price}`;
+    } else {
+      results.note = `Typical prices for "${item}" - estimates based on category`;
+      results.prices = {
+        'Tesco': { price: 'Budget-friendly', quality: 'Good' },
+        'Sainsburys': { price: 'Mid-range', quality: 'Good' },
+        'Waitrose': { price: 'Premium', quality: 'Excellent' },
+        'M&S': { price: 'Premium', quality: 'Excellent' },
+      };
     }
-  }
 
-  /**
-   * Find deals and compare prices
-   */
-  async findDeals(item: string, stores: string[]): Promise<string> {
-    const prompt = `You are a deal-hunting expert for UK supermarkets.
-
-Item: ${item}
-Stores to compare: ${stores.join(', ')}
-
-Provide:
-1. Typical price range for this item in London
-2. Which stores typically have the best deals
-3. Tips for finding this item on sale
-4. Generic alternatives that might save money
-
-Note: You don't have real-time pricing, so provide general advice based on typical UK supermarket pricing patterns.`;
-
-    try {
-      const message = await this.client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 768,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      });
-
-      const response = message.content[0];
-      return response.type === 'text' ? response.text : '';
-    } catch (error) {
-      console.error('Error finding deals:', error);
-      return 'Unable to find deals at this time.';
+    if (max_price) {
+      results.within_budget = Object.entries(results.prices).filter(
+        ([, data]: any) => typeof data.price === 'number' && data.price <= max_price
+      );
     }
+
+    return results;
   }
 
   /**
-   * Search UK supermarkets for a specific item
+   * Shopping list analysis tool
    */
-  async searchSupermarkets(
-    item: string,
-    options?: {
-      stores?: string[];
-      maxPrice?: number;
+  private analyzeShoppingList(input: any): any {
+    const { focus } = input;
+
+    if (!this.context) {
+      return { error: 'No shopping context available' };
     }
-  ): Promise<string> {
-    const stores = options?.stores || ['M&S', 'Waitrose', 'Tesco', 'Sainsburys'];
-    const prompt = `Search for "${item}" across these UK supermarkets: ${stores.join(', ')}.
 
-${options?.maxPrice ? `Maximum budget: £${options.maxPrice}` : ''}
+    const { shoppingList, currentUser } = this.context;
+    const budgetRemaining = currentUser.monthlyBudget - currentUser.currentSpent;
+    const familyBudget = currentUser.monthlyBudget;
 
-For each store, provide:
-1. Typical price range for this item
-2. Any known deals or promotions (e.g., Clubcard prices, Nectar points)
-3. Quality/value rating
-4. Availability notes
+    const analysis: any = {
+      focus,
+      itemCount: shoppingList.length,
+      insights: [],
+    };
 
-Also suggest:
-- Best store for this specific item
-- Money-saving tips
-- Cheaper alternatives if available
+    if (focus === 'budget') {
+      const totalCost = shoppingList.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0);
+      analysis.totalCost = totalCost.toFixed(2);
+      analysis.budgetImpact = ((totalCost / familyBudget) * 100).toFixed(2);
+      analysis.insights.push(`Shopping list costs £${analysis.totalCost} (${analysis.budgetImpact}% of budget)`);
 
-Keep it practical and London-focused.`;
-
-    try {
-      const message = await this.client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      });
-
-      const response = message.content[0];
-      return response.type === 'text' ? response.text : '';
-    } catch (error) {
-      console.error('Error searching supermarkets:', error);
-      return 'Unable to search supermarkets at this time.';
+      if (totalCost > budgetRemaining) {
+        analysis.insights.push(`⚠️ List exceeds remaining budget by £${(totalCost - budgetRemaining).toFixed(2)}`);
+      }
     }
+
+    if (focus === 'health') {
+      const categories = shoppingList.reduce((acc: any, item) => {
+        acc[item.category] = (acc[item.category] || 0) + 1;
+        return acc;
+      }, {});
+
+      analysis.categories = categories;
+      analysis.insights.push(`Category breakdown: ${JSON.stringify(categories)}`);
+    }
+
+    if (focus === 'completeness') {
+      const essentials = ['Milk', 'Bread', 'Eggs', 'Fresh produce', 'Protein'];
+      const hasEssentials = essentials.filter(essential =>
+        shoppingList.some(item => item.name.toLowerCase().includes(essential.toLowerCase()))
+      );
+
+      analysis.hasEssentials = hasEssentials;
+      analysis.missingEssentials = essentials.filter(e => !hasEssentials.includes(e));
+
+      if (analysis.missingEssentials.length > 0) {
+        analysis.insights.push(`Missing essentials: ${analysis.missingEssentials.join(', ')}`);
+      }
+    }
+
+    return analysis;
   }
 
   /**
-   * Clear conversation history
+   * Item suggestion tool
    */
-  clearHistory(): void {
-    this.conversationHistory = [];
+  private suggestItems(input: any): any {
+    const { category, count = 5 } = input;
+
+    const suggestions: any = {
+      category,
+      items: [],
+    };
+
+    // Provide contextual suggestions based on category
+    const suggestionDatabase: any = {
+      'essentials': [
+        { name: 'Milk', estimatedPrice: 1.45, reason: 'Family essential' },
+        { name: 'Bread', estimatedPrice: 0.95, reason: 'Daily staple' },
+        { name: 'Eggs (12)', estimatedPrice: 2.10, reason: 'Protein source' },
+        { name: 'Butter', estimatedPrice: 1.80, reason: 'Cooking essential' },
+        { name: 'Fresh vegetables', estimatedPrice: 3.00, reason: 'Nutrition' },
+      ],
+      'healthy snacks': [
+        { name: 'Fresh fruit', estimatedPrice: 2.50, reason: 'Healthy for Zeth' },
+        { name: 'Yogurt', estimatedPrice: 2.00, reason: 'Protein & probiotics' },
+        { name: 'Nuts (mixed)', estimatedPrice: 3.50, reason: 'Healthy fats' },
+        { name: 'Hummus', estimatedPrice: 1.50, reason: 'Nutritious dip' },
+        { name: 'Rice cakes', estimatedPrice: 1.20, reason: 'Low-calorie snack' },
+      ],
+      'meal ingredients': [
+        { name: 'Chicken breast', estimatedPrice: 4.50, reason: 'Lean protein' },
+        { name: 'Pasta', estimatedPrice: 0.70, reason: 'Versatile carb' },
+        { name: 'Tomato sauce', estimatedPrice: 0.90, reason: 'Meal base' },
+        { name: 'Onions', estimatedPrice: 0.60, reason: 'Flavor base' },
+        { name: 'Garlic', estimatedPrice: 0.40, reason: 'Essential seasoning' },
+      ],
+    };
+
+    const categoryItems = suggestionDatabase[category.toLowerCase()] || suggestionDatabase['essentials'];
+    suggestions.items = categoryItems.slice(0, count);
+    suggestions.estimatedTotal = suggestions.items.reduce((sum: number, item: any) => sum + item.estimatedPrice, 0).toFixed(2);
+
+    return suggestions;
   }
 
   /**
-   * Get conversation history
+   * Build system prompt with full context
    */
-  getHistory(): AIMessage[] {
-    return this.conversationHistory;
-  }
+  private buildSystemPrompt(): string {
+    if (!this.context) {
+      return 'You are a helpful AI shopping assistant.';
+    }
 
-  /**
-   * Build system prompt with context
-   */
-  private buildSystemPrompt(context: {
-    currentUser: User;
-    shoppingList: ShoppingItem[];
-    budget: number;
-  }): string {
-    return `You are a helpful AI shopping assistant for ChefsCart, a family grocery shopping app for a London family.
+    const { currentUser, shoppingList } = this.context;
+    const familyBudget = currentUser.monthlyBudget;
+    const budgetSpent = currentUser.currentSpent;
+    const budgetRemaining = currentUser.monthlyBudget - currentUser.currentSpent;
 
-Family Context:
-- Stephen (Dad) - Manages shared £500 budget
-- Cheslyn/Chez (Mum) - Manages £500 essentials budget
-- Zeth (Son, 16) - Has access to shared £500 budget
-- Total Family Budget: £1000/month
+    return `You are an advanced AI shopping assistant for a London family's grocery shopping app.
 
-Current User:
-- Name: ${context.currentUser.name}
-- Role: ${context.currentUser.role === 'parent1' ? 'Dad (Stephen)' : context.currentUser.role === 'parent2' ? 'Mum (Cheslyn)' : 'Son (Zeth)'}
-- Level: ${context.currentUser.level}
-- Points: ${context.currentUser.points}
-- Budget: £${context.currentUser.monthlyBudget}
-- Spent: £${context.currentUser.currentSpent}
-- Shopping List: ${context.shoppingList.length} items
+FAMILY CONTEXT:
+- Stephen (Dad) - Full shopping access
+- Cheslyn/Chez (Mum) - Full shopping access
+- Zeth (Son, 16) - Can add up to £200/month to list (currently added: £${currentUser.role === 'teen' ? currentUser.monthlyAddedValue.toFixed(2) : '0.00'})
 
-Primary UK Supermarkets to Search/Compare:
+CURRENT USER: ${currentUser.name} (${currentUser.role === 'parent1' ? 'Stephen/Dad' : currentUser.role === 'parent2' ? 'Cheslyn/Mum' : 'Zeth/Son'})
+- Level: ${currentUser.level}
+- Points: ${currentUser.points}
+
+BUDGET:
+- Family Budget: £${familyBudget.toFixed(2)}/month (one pot for everything)
+- Spent: £${budgetSpent.toFixed(2)}
+- Remaining: £${budgetRemaining.toFixed(2)}
+- Shopping List Items: ${shoppingList.length}
+- Estimated List Cost: £${shoppingList.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0).toFixed(2)}
+
+UK SUPERMARKETS (Priority order):
 1. M&S (Marks & Spencer) - Premium quality
-2. Waitrose - High quality, good deals with myWaitrose
-3. Tesco - All-round, Clubcard prices
-4. Sainsbury's - Quality and value, Nectar points
+2. Waitrose - High quality, myWaitrose deals
+3. Tesco - All-round, Clubcard savings
+4. Sainsbury's - Good value, Nectar points
 
-You can help with:
-1. Search and compare prices across M&S, Waitrose, Tesco, Sainsbury's
-2. Find best deals and money-saving tips
-3. Suggest budget-friendly meals (especially for Zeth)
-4. Recommend healthier alternatives
-5. Provide London-specific shopping advice
-6. Help track the £1000 family budget
+YOUR CAPABILITIES:
+✅ Calculate budgets, spending patterns, projections (use calculate_budget tool)
+✅ Search UK supermarket prices (use search_uk_supermarkets tool)
+✅ Analyze shopping lists for optimization (use analyze_shopping_list tool)
+✅ Suggest items based on needs (use suggest_items tool)
 
-Be friendly, encouraging (especially with Zeth!), and focus on practical, actionable advice.`;
-  }
+PERSONALITY:
+- Be practical and helpful
+- Focus on saving money and eating healthy
+- Encourage Zeth's participation (he's learning to manage budgets!)
+- Provide specific, actionable advice
+- Use tools whenever calculations or price comparisons are needed
 
-  /**
-   * Build suggestions prompt
-   */
-  private buildSuggestionsPrompt(context: {
-    currentUser: User;
-    shoppingList: ShoppingItem[];
-    budget: number;
-    preferences: string[];
-  }): string {
-    return `Generate smart shopping suggestions for a family in London.
-
-Current Shopping List:
-${context.shoppingList.map((item) => `- ${item.name}`).join('\n')}
-
-Budget: £${context.budget}
-User Preferences: ${context.preferences.join(', ')}
-
-Provide 3-5 suggestions for:
-1. Items they might be missing
-2. Money-saving alternatives
-3. Healthy additions
-4. Teen-friendly snacks
-
-Keep it brief and practical.`;
+Remember: This family wants to eat better and save money. Every suggestion should help them achieve that!`;
   }
 }
 
-// Export a singleton instance creator
+// Export singleton creator
 export const createShoppingAssistant = (apiKey: string): ShoppingAssistantAgent => {
   return new ShoppingAssistantAgent(apiKey);
 };

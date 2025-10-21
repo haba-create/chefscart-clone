@@ -54,14 +54,16 @@ interface AppState {
 }
 
 // Initialize default users - Stephen, Cheslyn (Chez), and Zeth
-// Family budget: £1000 total (£500 essentials managed by Chez, £500 shared)
+// Family budget: £1000 total for everything
+// Zeth can only add up to £200 worth of items per month
 const defaultUsers: User[] = [
   {
     id: 'user-1',
     name: 'Stephen',
     role: 'parent1',
-    monthlyBudget: 500, // Access to shared budget
+    monthlyBudget: 1000, // Full family budget
     currentSpent: 0,
+    monthlyAddedValue: 0, // No limit for parents
     points: 0,
     level: 1,
     badges: [],
@@ -75,8 +77,9 @@ const defaultUsers: User[] = [
     id: 'user-2',
     name: 'Cheslyn',
     role: 'parent2',
-    monthlyBudget: 500, // Manages essentials budget
+    monthlyBudget: 1000, // Full family budget
     currentSpent: 0,
+    monthlyAddedValue: 0, // No limit for parents
     points: 0,
     level: 1,
     badges: [],
@@ -90,8 +93,9 @@ const defaultUsers: User[] = [
     id: 'user-3',
     name: 'Zeth',
     role: 'teen',
-    monthlyBudget: 500, // Access to shared budget
+    monthlyBudget: 1000, // Full family budget
     currentSpent: 0,
+    monthlyAddedValue: 0, // Track to enforce £200 monthly limit
     points: 0,
     level: 1,
     badges: [],
@@ -108,7 +112,7 @@ const defaultShoppingList: ShoppingList = {
   items: [],
   lastUpdated: new Date(),
   totalEstimatedCost: 0,
-  budgetRemaining: 1000, // Family budget £1000 (£500 essentials + £500 shared)
+  budgetRemaining: 1000, // Family budget £1000 total
 };
 
 const defaultChallenges: Challenge[] = [
@@ -165,6 +169,19 @@ export const useStore = create<AppState>()(
 
       addShoppingItem: (item) =>
         set((state) => {
+          // Check if user is Zeth and enforce £200 monthly limit
+          const currentUser = state.currentUser;
+          const itemValue = (item.price || 0) * item.quantity;
+
+          if (currentUser && currentUser.role === 'teen') {
+            const newMonthlyTotal = currentUser.monthlyAddedValue + itemValue;
+            if (newMonthlyTotal > 200) {
+              // Alert user that they've exceeded their £200 limit
+              alert(`Zeth's monthly limit: You can only add £${(200 - currentUser.monthlyAddedValue).toFixed(2)} more this month (£200 limit)`);
+              return state; // Don't add the item
+            }
+          }
+
           const newItem: ShoppingItem = {
             ...item,
             id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -178,19 +195,33 @@ export const useStore = create<AppState>()(
             0
           );
 
+          // Update user's monthly added value if Zeth
+          const updatedUsers = currentUser && currentUser.role === 'teen'
+            ? state.users.map(u =>
+                u.id === currentUser.id
+                  ? { ...u, monthlyAddedValue: u.monthlyAddedValue + itemValue }
+                  : u
+              )
+            : state.users;
+
           return {
             shoppingList: {
               ...state.shoppingList,
               items: updatedItems,
               lastUpdated: new Date(),
               totalEstimatedCost,
-              budgetRemaining: 1400 - totalEstimatedCost,
+              budgetRemaining: 1000 - totalEstimatedCost,
             },
+            users: updatedUsers,
+            currentUser: currentUser && currentUser.role === 'teen'
+              ? { ...currentUser, monthlyAddedValue: currentUser.monthlyAddedValue + itemValue }
+              : currentUser,
           };
         }),
 
       removeShoppingItem: (itemId) =>
         set((state) => {
+          const removedItem = state.shoppingList.items.find(item => item.id === itemId);
           const updatedItems = state.shoppingList.items.filter(
             (item) => item.id !== itemId
           );
@@ -199,14 +230,33 @@ export const useStore = create<AppState>()(
             0
           );
 
+          // If removed item was added by Zeth, decrease their monthlyAddedValue
+          const currentUser = state.currentUser;
+          const removedValue = removedItem ? (removedItem.price || 0) * removedItem.quantity : 0;
+          const isZethItem = removedItem && currentUser &&
+                             removedItem.addedBy === currentUser.id &&
+                             currentUser.role === 'teen';
+
+          const updatedUsers = isZethItem
+            ? state.users.map(u =>
+                u.id === currentUser.id
+                  ? { ...u, monthlyAddedValue: Math.max(0, u.monthlyAddedValue - removedValue) }
+                  : u
+              )
+            : state.users;
+
           return {
             shoppingList: {
               ...state.shoppingList,
               items: updatedItems,
               lastUpdated: new Date(),
               totalEstimatedCost,
-              budgetRemaining: 1400 - totalEstimatedCost,
+              budgetRemaining: 1000 - totalEstimatedCost,
             },
+            users: updatedUsers,
+            currentUser: isZethItem && currentUser
+              ? { ...currentUser, monthlyAddedValue: Math.max(0, currentUser.monthlyAddedValue - removedValue) }
+              : currentUser,
           };
         }),
 

@@ -8,6 +8,7 @@ export interface User {
   avatar?: string;
   monthlyBudget: number;
   currentSpent: number;
+  monthlyAddedValue: number; // Track how much user has added to list (for Zeth's £200 limit)
   points: number;
   level: number;
   badges: Badge[];
