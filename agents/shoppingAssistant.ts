@@ -238,6 +238,54 @@ Note: You don't have real-time pricing, so provide general advice based on typic
   }
 
   /**
+   * Search UK supermarkets for a specific item
+   */
+  async searchSupermarkets(
+    item: string,
+    options?: {
+      stores?: string[];
+      maxPrice?: number;
+    }
+  ): Promise<string> {
+    const stores = options?.stores || ['M&S', 'Waitrose', 'Tesco', 'Sainsburys'];
+    const prompt = `Search for "${item}" across these UK supermarkets: ${stores.join(', ')}.
+
+${options?.maxPrice ? `Maximum budget: £${options.maxPrice}` : ''}
+
+For each store, provide:
+1. Typical price range for this item
+2. Any known deals or promotions (e.g., Clubcard prices, Nectar points)
+3. Quality/value rating
+4. Availability notes
+
+Also suggest:
+- Best store for this specific item
+- Money-saving tips
+- Cheaper alternatives if available
+
+Keep it practical and London-focused.`;
+
+    try {
+      const message = await this.client.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 1024,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+      });
+
+      const response = message.content[0];
+      return response.type === 'text' ? response.text : '';
+    } catch (error) {
+      console.error('Error searching supermarkets:', error);
+      return 'Unable to search supermarkets at this time.';
+    }
+  }
+
+  /**
    * Clear conversation history
    */
   clearHistory(): void {
@@ -259,25 +307,38 @@ Note: You don't have real-time pricing, so provide general advice based on typic
     shoppingList: ShoppingItem[];
     budget: number;
   }): string {
-    return `You are a helpful AI shopping assistant for ChefsCart, a family grocery shopping app in London. You help families shop smarter, save money, and eat better.
+    return `You are a helpful AI shopping assistant for ChefsCart, a family grocery shopping app for a London family.
 
-Current Context:
-- User: ${context.currentUser.name} (${context.currentUser.role})
-- User Level: ${context.currentUser.level}
+Family Context:
+- Stephen (Dad) - Manages shared £500 budget
+- Cheslyn/Chez (Mum) - Manages £500 essentials budget
+- Zeth (Son, 16) - Has access to shared £500 budget
+- Total Family Budget: £1000/month
+
+Current User:
+- Name: ${context.currentUser.name}
+- Role: ${context.currentUser.role === 'parent1' ? 'Dad (Stephen)' : context.currentUser.role === 'parent2' ? 'Mum (Cheslyn)' : 'Son (Zeth)'}
+- Level: ${context.currentUser.level}
 - Points: ${context.currentUser.points}
 - Budget: £${context.currentUser.monthlyBudget}
-- Current Spent: £${context.currentUser.currentSpent}
-- Shopping List Items: ${context.shoppingList.length}
+- Spent: £${context.currentUser.currentSpent}
+- Shopping List: ${context.shoppingList.length} items
 
-You should:
-1. Be friendly and encouraging, especially when talking to the teen user
-2. Focus on budget-conscious shopping
-3. Suggest UK supermarkets (Tesco, Sainsbury's, Asda, Morrisons, Aldi, Lidl)
-4. Recommend teen-friendly meals and snacks
-5. Gamify shopping with points and challenges
-6. Provide London-specific advice
+Primary UK Supermarkets to Search/Compare:
+1. M&S (Marks & Spencer) - Premium quality
+2. Waitrose - High quality, good deals with myWaitrose
+3. Tesco - All-round, Clubcard prices
+4. Sainsbury's - Quality and value, Nectar points
 
-Keep responses concise and actionable.`;
+You can help with:
+1. Search and compare prices across M&S, Waitrose, Tesco, Sainsbury's
+2. Find best deals and money-saving tips
+3. Suggest budget-friendly meals (especially for Zeth)
+4. Recommend healthier alternatives
+5. Provide London-specific shopping advice
+6. Help track the £1000 family budget
+
+Be friendly, encouraging (especially with Zeth!), and focus on practical, actionable advice.`;
   }
 
   /**

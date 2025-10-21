@@ -10,11 +10,11 @@ export function UserSwitcher() {
   const getRoleLabel = (role: User['role']): string => {
     switch (role) {
       case 'parent1':
-        return 'Parent 1';
+        return 'Dad - Shared Budget';
       case 'parent2':
-        return 'Parent 2';
+        return 'Mum - Essentials Manager';
       case 'teen':
-        return 'Teen (16)';
+        return 'Son (16) - Shared Budget';
       default:
         return role;
     }
