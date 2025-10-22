@@ -36,6 +36,8 @@ export interface TrolleyItem {
   notes?: string;
   votes: ItemVote[];
   urgency: 'low' | 'medium' | 'high';
+  image_url?: string; // Product image from UK supermarket
+  purchase_url?: string; // Direct link to buy from supermarket
 }
 
 // Legacy alias for backwards compatibility (will be removed)
@@ -70,6 +72,8 @@ export interface PurchasedItem {
   purchasedAt: Date;
   addedBy: string;
   notes?: string;
+  image_url?: string;
+  purchase_url?: string;
 }
 
 export interface PurchaseHistory {

@@ -36,3 +36,4 @@ dist-ssr
 
 # Testing
 coverage
+database/products.db

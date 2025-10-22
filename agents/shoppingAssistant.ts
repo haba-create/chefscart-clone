@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { TrolleyItem, User } from '../src/types';
-import { searchGroceries, type GroceryItem } from '../src/data/groceries';
+import { apiService, type ProductWithPrices } from '../src/services/api';
 
 /**
  * AI-First Shopping Assistant using Anthropic Claude with Tools
@@ -45,7 +45,7 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'search_uk_supermarkets',
-    description: 'Search and compare prices for grocery items across UK supermarkets (M&S, Waitrose, Tesco, Sainsburys). Provides typical price ranges, deals, and recommendations.',
+    description: 'Search and compare real-time prices for grocery items across UK supermarkets (Tesco, Sainsburys, Waitrose, Ocado). Provides actual product data with images, deals, and direct purchase links.',
     input_schema: {
       type: 'object',
       properties: {
@@ -56,7 +56,7 @@ const TOOLS: Anthropic.Tool[] = [
         stores: {
           type: 'array',
           items: { type: 'string' },
-          description: 'List of stores to compare (defaults to all: M&S, Waitrose, Tesco, Sainsburys)',
+          description: 'List of stores to compare (defaults to all: Tesco, Sainsburys, Waitrose, Ocado)',
         },
         max_price: {
           type: 'number',
@@ -101,7 +101,7 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'add_to_shopping_list',
-    description: 'Add researched grocery items directly to the shopping list with real UK prices from Tesco, Sainsburys, Waitrose, or M&S. Use this after searching for items to actually add them to the list.',
+    description: 'Add researched grocery items directly to the shopping list with real UK prices from Tesco, Sainsburys, Waitrose, or Ocado. Use this after searching for items to actually add them to the list.',
     input_schema: {
       type: 'object',
       properties: {
@@ -115,7 +115,7 @@ const TOOLS: Anthropic.Tool[] = [
         },
         preferredStore: {
           type: 'string',
-          enum: ['Tesco', 'Sainsburys', 'Waitrose', 'M&S'],
+          enum: ['Tesco', 'Sainsburys', 'Waitrose', 'Ocado'],
           description: 'Preferred store to get price from',
         },
       },
@@ -320,61 +320,85 @@ export class ShoppingAssistantAgent {
   }
 
   /**
-   * UK Supermarket search tool
+   * UK Supermarket search tool - Real-time API search
    */
-  private searchSupermarkets(input: any): any {
-    const { item, stores = ['M&S', 'Waitrose', 'Tesco', 'Sainsburys'], max_price } = input;
+  private async searchSupermarkets(input: any): Promise<any> {
+    const { item, stores, max_price } = input;
 
-    // Provide realistic price ranges based on typical UK supermarket pricing
-    const priceDatabase: any = {
-      'milk': { 'Tesco': { price: 1.45, deals: 'Clubcard price' }, 'Sainsburys': { price: 1.50 }, 'Waitrose': { price: 1.65 }, 'M&S': { price: 1.75 } },
-      'bread': { 'Tesco': { price: 0.95 }, 'Sainsburys': { price: 1.00 }, 'Waitrose': { price: 1.20 }, 'M&S': { price: 1.30 } },
-      'eggs': { 'Tesco': { price: 2.10, deals: 'Clubcard £1.90' }, 'Sainsburys': { price: 2.20, deals: 'Nectar points' }, 'Waitrose': { price: 2.50 }, 'M&S': { price: 2.80 } },
-      'chicken': { 'Tesco': { price: 4.50 }, 'Sainsburys': { price: 4.75 }, 'Waitrose': { price: 5.50 }, 'M&S': { price: 6.00 } },
-      'pasta': { 'Tesco': { price: 0.70 }, 'Sainsburys': { price: 0.75 }, 'Waitrose': { price: 1.00 }, 'M&S': { price: 1.20 } },
-    };
-
-    const itemLower = item.toLowerCase();
-    const results: any = {
-      item,
-      stores_searched: stores,
-      prices: {},
-      recommendation: '',
-    };
-
-    // Find matching item or provide estimate
-    const matchedItem = Object.keys(priceDatabase).find(key => itemLower.includes(key));
-
-    if (matchedItem) {
-      stores.forEach((store: string) => {
-        if (priceDatabase[matchedItem][store]) {
-          results.prices[store] = priceDatabase[matchedItem][store];
-        }
+    try {
+      // Search using the real API (auto-scrapes if not in cache)
+      const products = await apiService.searchProducts(item, {
+        maxPrice: max_price,
+        limit: 10,
       });
 
-      // Find cheapest
-      const cheapest = Object.entries(results.prices).sort(
-        ([, a]: any, [, b]: any) => a.price - b.price
-      )[0];
+      if (products.length === 0) {
+        return {
+          item,
+          found: false,
+          message: `No products found for "${item}". Try different keywords or the item may need to be scraped.`,
+          suggestion: 'Try searching for: milk, bread, eggs, chicken, pasta, etc.',
+        };
+      }
 
-      results.recommendation = `Best price: ${cheapest[0]} at £${(cheapest[1] as any).price}`;
-    } else {
-      results.note = `Typical prices for "${item}" - estimates based on category`;
-      results.prices = {
-        'Tesco': { price: 'Budget-friendly', quality: 'Good' },
-        'Sainsburys': { price: 'Mid-range', quality: 'Good' },
-        'Waitrose': { price: 'Premium', quality: 'Excellent' },
-        'M&S': { price: 'Premium', quality: 'Excellent' },
+      // Organize results by product
+      const results: any = {
+        item,
+        found: true,
+        products: products.slice(0, 5).map((product: ProductWithPrices) => {
+          // Filter prices by requested stores if specified
+          let prices = product.prices;
+          if (stores && stores.length > 0) {
+            prices = prices.filter((p) => stores.includes(p.store));
+          }
+
+          return {
+            name: product.name,
+            brand: product.brand,
+            description: product.description,
+            unit: product.unit,
+            image_url: product.image_url,
+            best_price: product.best_price,
+            best_store: product.best_store,
+            prices: prices.map((p) => ({
+              store: p.store,
+              price: p.price,
+              was_price: p.was_price,
+              promotion: p.promotion_text,
+              availability: p.availability,
+              purchase_url: p.purchase_url,
+            })),
+            deals: prices
+              .filter((p) => p.was_price && p.was_price > p.price)
+              .map((p) => ({
+                store: p.store,
+                saving: ((p.was_price! - p.price) / p.was_price! * 100).toFixed(0) + '%',
+                promotion: p.promotion_text,
+              })),
+          };
+        }),
+        stores_searched: stores || ['Tesco', 'Sainsburys', 'Waitrose', 'Ocado'],
+        recommendation: `Best overall: ${products[0].name} at ${products[0].best_store} for £${products[0].best_price}`,
+      };
+
+      // Add within budget filter
+      if (max_price) {
+        results.within_budget = results.products.filter(
+          (p: any) => p.best_price <= max_price
+        );
+        results.budget_friendly_count = results.within_budget.length;
+      }
+
+      return results;
+    } catch (error: any) {
+      console.error('Error searching supermarkets:', error);
+      return {
+        item,
+        error: true,
+        message: `Failed to search for "${item}". Backend server may not be running.`,
+        suggestion: 'Ensure the backend server is running with: npm run dev:server',
       };
     }
-
-    if (max_price) {
-      results.within_budget = Object.entries(results.prices).filter(
-        ([, data]: any) => typeof data.price === 'number' && data.price <= max_price
-      );
-    }
-
-    return results;
   }
 
   /**
@@ -479,9 +503,9 @@ export class ShoppingAssistantAgent {
   }
 
   /**
-   * Add item to shopping list from UK grocery database
+   * Add item to shopping list from real UK grocery database
    */
-  private addToShoppingList(input: any): any {
+  private async addToShoppingList(input: any): Promise<any> {
     const { itemName, quantity, preferredStore = 'Tesco' } = input;
 
     if (!this.context) {
@@ -492,75 +516,91 @@ export class ShoppingAssistantAgent {
       return { error: 'Shopping list add function not available' };
     }
 
-    // Search UK grocery database
-    const searchResults = searchGroceries(itemName);
+    try {
+      // Search real UK grocery database via API
+      const searchResults = await apiService.searchProducts(itemName, { limit: 5 });
 
-    if (searchResults.length === 0) {
-      return {
-        success: false,
-        error: `Item "${itemName}" not found in UK grocery database`,
-        suggestion: 'Try searching with different keywords or add manually',
-      };
-    }
-
-    // Get best match (first result)
-    const groceryItem: GroceryItem = searchResults[0];
-
-    // Get price from preferred store or best price
-    const storeKey = preferredStore as keyof typeof groceryItem.prices;
-    const price = groceryItem.prices[storeKey] || groceryItem.bestPrice;
-    const store = groceryItem.prices[storeKey] ? preferredStore : groceryItem.bestStore;
-
-    // Check Zeth's budget limit
-    if (this.context.currentUser.role === 'teen') {
-      const itemCost = price * quantity;
-      const newTotal = this.context.currentUser.monthlyAddedValue + itemCost;
-
-      if (newTotal > 200) {
+      if (searchResults.length === 0) {
         return {
           success: false,
-          error: `Adding this item would exceed Zeth's £200 monthly limit`,
-          currentAdded: this.context.currentUser.monthlyAddedValue.toFixed(2),
-          itemCost: itemCost.toFixed(2),
-          remaining: (200 - this.context.currentUser.monthlyAddedValue).toFixed(2),
+          error: `Item "${itemName}" not found in UK grocery database`,
+          suggestion: 'Try searching with different keywords. The database includes common items like milk, bread, eggs, etc.',
         };
       }
-    }
 
-    // Create trolley item
-    const newItem: Omit<TrolleyItem, 'id' | 'addedAt' | 'votes'> = {
-      name: groceryItem.name,
-      quantity,
-      unit: groceryItem.unit,
-      category: groceryItem.category,
-      price,
-      store,
-      addedBy: this.context.currentUser.id,
-      purchased: false,
-      urgency: 'medium',
-    };
+      // Get best match (first result)
+      const product: ProductWithPrices = searchResults[0];
 
-    // Add to shopping list via context callback
-    try {
+      // Get price from preferred store or best price
+      const storePrice = product.prices.find((p) => p.store === preferredStore);
+      const price = storePrice ? storePrice.price : product.best_price;
+      const store = storePrice ? preferredStore : product.best_store;
+      const purchaseUrl = storePrice ? storePrice.purchase_url : product.prices[0]?.purchase_url;
+
+      // Check Zeth's budget limit
+      if (this.context.currentUser.role === 'teen') {
+        const itemCost = price * quantity;
+        const newTotal = this.context.currentUser.monthlyAddedValue + itemCost;
+
+        if (newTotal > 200) {
+          return {
+            success: false,
+            error: `Adding this item would exceed Zeth's £200 monthly limit`,
+            currentAdded: this.context.currentUser.monthlyAddedValue.toFixed(2),
+            itemCost: itemCost.toFixed(2),
+            remaining: (200 - this.context.currentUser.monthlyAddedValue).toFixed(2),
+          };
+        }
+      }
+
+      // Create trolley item
+      const newItem: Omit<TrolleyItem, 'id' | 'addedAt' | 'votes'> = {
+        name: product.name,
+        quantity,
+        unit: product.unit,
+        category: product.category,
+        price,
+        store,
+        addedBy: this.context.currentUser.id,
+        purchased: false,
+        urgency: 'medium',
+        image_url: product.image_url,
+        purchase_url: purchaseUrl,
+      };
+
+      // Add to shopping list via context callback
       this.context.addItem(newItem);
+
+      // Find any deals
+      const deals = product.prices
+        .filter((p) => p.was_price && p.was_price > p.price)
+        .map((p) => ({
+          store: p.store,
+          saving: `£${(p.was_price! - p.price).toFixed(2)}`,
+          promotion: p.promotion_text,
+        }));
 
       return {
         success: true,
         item: {
-          name: groceryItem.name,
+          name: product.name,
+          brand: product.brand,
           quantity,
-          unit: groceryItem.unit,
+          unit: product.unit,
           price,
           store,
           totalCost: (price * quantity).toFixed(2),
+          image_url: product.image_url,
+          purchase_url: purchaseUrl,
         },
-        deals: groceryItem.deals,
-        message: `Added ${quantity} ${groceryItem.unit} of ${groceryItem.name} from ${store} at £${price} each (Total: £${(price * quantity).toFixed(2)})`,
+        deals: deals.length > 0 ? deals : undefined,
+        message: `Added ${quantity} ${product.unit} of ${product.name} from ${store} at £${price} each (Total: £${(price * quantity).toFixed(2)})`,
       };
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'Failed to add item to shopping list',
+        error: error.message || 'Failed to add item to shopping list. Backend server may not be running.',
+        suggestion: 'Ensure the backend is running with: npm run dev:server',
       };
     }
   }
@@ -596,11 +636,11 @@ BUDGET:
 - Shopping List Items: ${trolley.length}
 - Estimated List Cost: £${trolley.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0).toFixed(2)}
 
-UK SUPERMARKETS (Priority order):
-1. M&S (Marks & Spencer) - Premium quality
-2. Waitrose - High quality, myWaitrose deals
-3. Tesco - All-round, Clubcard savings
-4. Sainsbury's - Good value, Nectar points
+UK SUPERMARKETS (Real-time data available):
+1. Tesco - All-round, Clubcard savings
+2. Sainsbury's - Good value, Nectar points
+3. Waitrose - High quality, myWaitrose deals
+4. Ocado - Online specialist, premium selection
 
 YOUR CAPABILITIES:
 ✅ Calculate budgets, spending patterns, projections (use calculate_budget tool)
