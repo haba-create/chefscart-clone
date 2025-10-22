@@ -8,6 +8,7 @@ import {
   ThumbsDown,
   MessageSquare,
   ShoppingCart,
+  ExternalLink,
 } from 'lucide-react';
 import type { TrolleyItem } from '../src/types';
 
@@ -292,58 +293,93 @@ export function Trolley() {
                   key={item.id}
                   className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <button
-                          onClick={() => handleTogglePurchased(item.id)}
-                          className="w-6 h-6 border-2 border-gray-300 rounded-md hover:border-green-500 transition-colors flex items-center justify-center"
-                        >
-                          {item.purchased && (
-                            <Check className="w-4 h-4 text-green-500" />
-                          )}
-                        </button>
+                  <div className="flex items-start space-x-4">
+                    {/* Product Image */}
+                    {item.image_url && (
+                      <img
+                        src={item.image_url}
+                        alt={item.name}
+                        className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                        onError={(e) => {
+                          // Hide image if it fails to load
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
 
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900">
-                            {item.name}
-                          </h4>
-                          <div className="flex items-center flex-wrap space-x-2 text-sm text-gray-600 mt-1">
-                            <span>
-                              {item.quantity} {item.unit}
-                            </span>
-                            <span>•</span>
-                            <span>{item.category}</span>
-                            {item.store && (
-                              <>
-                                <span>•</span>
-                                <span className="text-primary-600 font-medium">
-                                  {item.store}
-                                </span>
-                              </>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3 flex-1">
+                          <button
+                            onClick={() => handleTogglePurchased(item.id)}
+                            className="w-6 h-6 border-2 border-gray-300 rounded-md hover:border-green-500 transition-colors flex items-center justify-center flex-shrink-0 mt-1"
+                          >
+                            {item.purchased && (
+                              <Check className="w-4 h-4 text-green-500" />
                             )}
-                            {item.price && (
-                              <>
-                                <span>•</span>
-                                <span className="font-semibold text-green-600">
-                                  £{(item.price * item.quantity).toFixed(2)}
-                                </span>
-                              </>
+                          </button>
+
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-gray-900">
+                              {item.name}
+                            </h4>
+                            <div className="flex items-center flex-wrap gap-2 text-sm text-gray-600 mt-1">
+                              <span>
+                                {item.quantity} {item.unit}
+                              </span>
+                              <span>•</span>
+                              <span>{item.category}</span>
+                              {item.store && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-primary-600 font-medium">
+                                    {item.store}
+                                  </span>
+                                </>
+                              )}
+                              {item.price && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-semibold text-green-600">
+                                    £{(item.price * item.quantity).toFixed(2)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Purchase Link */}
+                            {item.purchase_url && (
+                              <a
+                                href={item.purchase_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800 font-medium mt-2"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                                <span>Buy Now at {item.store}</span>
+                              </a>
                             )}
                           </div>
+
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ${
+                              urgencyColors[item.urgency]
+                            }`}
+                          >
+                            {item.urgency}
+                          </span>
                         </div>
 
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            urgencyColors[item.urgency]
-                          }`}
+                        <button
+                          onClick={() => removeTrolleyItem(item.id)}
+                          className="text-gray-400 hover:text-red-600 transition-colors p-2 flex-shrink-0"
                         >
-                          {item.urgency}
-                        </span>
+                          <Trash2 className="w-5 h-5" />
+                        </button>
                       </div>
 
                       {/* Voting */}
-                      <div className="flex items-center space-x-4 mt-3">
+                      <div className="flex items-center space-x-4 mt-3 ml-9">
                         <button
                           onClick={() => handleVote(item.id, 'approve')}
                           className={`flex items-center space-x-1 text-sm ${
@@ -376,13 +412,6 @@ export function Trolley() {
                         )}
                       </div>
                     </div>
-
-                    <button
-                      onClick={() => removeTrolleyItem(item.id)}
-                      className="text-gray-400 hover:text-red-600 transition-colors p-2"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
                   </div>
                 </div>
               );
@@ -403,27 +432,35 @@ export function Trolley() {
             {purchasedItems.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between p-3 bg-white rounded-lg opacity-60"
+                className="flex items-center space-x-3 p-3 bg-white rounded-lg opacity-60"
               >
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={() => handleTogglePurchased(item.id)}
-                    className="w-6 h-6 bg-green-500 rounded-md flex items-center justify-center"
-                  >
-                    <Check className="w-4 h-4 text-white" />
-                  </button>
-                  <div>
-                    <p className="font-medium text-gray-900 line-through">
-                      {item.name}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {item.quantity} {item.unit}
-                      {item.store && ` • ${item.store}`}
-                    </p>
-                  </div>
+                {item.image_url && (
+                  <img
+                    src={item.image_url}
+                    alt={item.name}
+                    className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                )}
+                <button
+                  onClick={() => handleTogglePurchased(item.id)}
+                  className="w-6 h-6 bg-green-500 rounded-md flex items-center justify-center flex-shrink-0"
+                >
+                  <Check className="w-4 h-4 text-white" />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 line-through">
+                    {item.name}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {item.quantity} {item.unit}
+                    {item.store && ` • ${item.store}`}
+                  </p>
                 </div>
                 {item.price && (
-                  <span className="text-sm font-semibold text-gray-600">
+                  <span className="text-sm font-semibold text-gray-600 flex-shrink-0">
                     £{(item.price * item.quantity).toFixed(2)}
                   </span>
                 )}
