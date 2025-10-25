@@ -31,7 +31,7 @@ c70d14a - Fix AI assistant tool handling to support multiple tool calls
 
 ### Prerequisites
 - Railway account (sign up at https://railway.app)
-- Your RapidAPI key: `df3c1b2329mshe0974849a4730a5p14251ajsn2c72bc05f7ab`
+- Your Apify API token (from https://console.apify.com/account/integrations)
 - Your Anthropic API key
 
 ### Step 1: Create Backend Service
@@ -51,7 +51,7 @@ Start Command: npm run dev:server
 
 **Environment Variables:**
 ```bash
-RAPID_API_KEY=df3c1b2329mshe0974849a4730a5p14251ajsn2c72bc05f7ab
+APIFY_API_TOKEN=your_apify_api_token_here
 PORT=3001
 NODE_ENV=production
 DATABASE_PATH=./database/products.db
@@ -120,9 +120,9 @@ npm run db:scrape
 
 ## Troubleshooting
 
-### Backend shows "RapidAPI: Not configured"
-- Check environment variable `RAPID_API_KEY` is set correctly
-- Verify you're subscribed to the RapidAPI plan
+### Backend shows "Apify: Not configured"
+- Check environment variable `APIFY_API_TOKEN` is set correctly
+- Verify your Apify account is active and has credits
 
 ### Frontend can't connect to backend
 - Verify `VITE_API_URL` points to your backend Railway URL
@@ -146,10 +146,10 @@ Once deployed to Railway:
 
 1. **AI Assistant searches** trigger API call to your backend
 2. **Backend checks database** for cached products
-3. **If not found**, backend uses RapidAPI to fetch real UK supermarket data
-4. **RapidAPI returns** real products with:
+3. **If not found**, backend uses Apify to scrape real UK supermarket data
+4. **Apify returns** real products with:
    - Product names, descriptions, brands
-   - Actual prices from Tesco, Sainsbury's, Waitrose, Ocado
+   - Actual prices from Tesco, Sainsbury's, and Waitrose
    - Product images
    - Direct purchase URLs
 5. **Data is cached** in SQLite database for 6 hours
@@ -163,11 +163,12 @@ Once deployed to Railway:
 - Free tier: $5/month credit (covers testing)
 - Hobby plan: $5/month per service (recommended)
 
-**RapidAPI (You already have Basic plan):**
-- $0.10 per API call
-- Example: 100 searches = $10
+**Apify:**
+- Free tier: $5 monthly credit (includes limited scraping)
+- Starter plan: $49/month for more usage
+- Pay-as-you-go: Based on compute units used
 
-**Total estimated monthly cost:** $15-25 depending on usage
+**Total estimated monthly cost:** $10-20 depending on usage (Railway + Apify free tiers cover basic testing)
 
 ---
 
@@ -180,9 +181,9 @@ Once deployed to Railway:
 
 **Railway Production:**
 - ✅ No network restrictions
-- ✅ RapidAPI works perfectly
-- ✅ Direct web scraping works as fallback
-- ✅ Real-time data with images and purchase links
+- ✅ Apify scraping works perfectly
+- ✅ Real-time data from Tesco, Sainsbury's, and Waitrose
+- ✅ Product images and direct purchase links
 
 ---
 
