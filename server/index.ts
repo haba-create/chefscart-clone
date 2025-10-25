@@ -12,7 +12,7 @@ const db = new ProductDatabase();
 
 // Initialize scraper
 const scraper = new GroceryScraper(db, {
-  rapidApiKey: process.env.RAPID_API_KEY,
+  apifyApiToken: process.env.APIFY_API_TOKEN,
   enableCaching: true,
   cacheExpiryHours: 6,
   rateLimit: 60,
@@ -174,7 +174,7 @@ app.listen(PORT, () => {
   console.log(`📡 Server running on http://localhost:${PORT}`);
   console.log(`🗄️  Database: ${db.getStats().total_products} products`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔑 RapidAPI: ${process.env.RAPID_API_KEY ? 'Configured ✅' : 'Not configured ⚠️'}`);
+  console.log(`🔑 Apify: ${process.env.APIFY_API_TOKEN ? 'Configured ✅' : 'Not configured ⚠️'}`);
 });
 
 // Graceful shutdown
