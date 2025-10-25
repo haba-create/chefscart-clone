@@ -164,7 +164,7 @@ class ProductDatabase {
     let sql = `
       SELECT DISTINCT p.*,
         MIN(pp.price) as best_price,
-        (SELECT store FROM product_prices WHERE product_id = p.id AND price = MIN(pp.price) LIMIT 1) as best_store
+        (SELECT store FROM product_prices WHERE product_id = p.id ORDER BY price ASC LIMIT 1) as best_store
       FROM products p
       LEFT JOIN product_prices pp ON p.id = pp.product_id
       WHERE (p.name LIKE ? OR p.brand LIKE ? OR p.description LIKE ?)
