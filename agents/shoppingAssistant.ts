@@ -184,16 +184,26 @@ export class ShoppingAssistantAgent {
 
       // Handle tool calls
       while (response.stop_reason === 'tool_use') {
-        const toolUse = response.content.find(
+        // Find ALL tool_use blocks (Claude might use multiple tools at once)
+        const toolUses = response.content.filter(
           (block) => block.type === 'tool_use'
-        ) as Anthropic.ToolUseBlock | undefined;
+        ) as Anthropic.ToolUseBlock[];
 
-        if (!toolUse) break;
+        if (toolUses.length === 0) break;
 
-        // Execute the tool
-        const toolResult = await this.executeTool(toolUse.name, toolUse.input);
+        // Execute ALL tools and collect results
+        const toolResults = await Promise.all(
+          toolUses.map(async (toolUse) => {
+            const result = await this.executeTool(toolUse.name, toolUse.input);
+            return {
+              type: 'tool_result' as const,
+              tool_use_id: toolUse.id,
+              content: JSON.stringify(result),
+            };
+          })
+        );
 
-        // Add assistant response and tool result to messages
+        // Add assistant response and all tool results to messages
         messages = [
           ...messages,
           {
@@ -202,13 +212,7 @@ export class ShoppingAssistantAgent {
           },
           {
             role: 'user',
-            content: [
-              {
-                type: 'tool_result',
-                tool_use_id: toolUse.id,
-                content: JSON.stringify(toolResult),
-              },
-            ],
+            content: toolResults,
           },
         ];
 
