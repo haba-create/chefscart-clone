@@ -67,21 +67,17 @@ export class GroceryScraper {
     console.log(`🔍 Scraping all stores for: "${searchTerm}"`);
 
     try {
-      // Try RapidAPI first (covers all stores)
-      if (this.config.rapidApiKey) {
-        const rapidResults = await this.scrapeViaRapidAPI(searchTerm);
-        results.push(...rapidResults);
-      }
+      // NOTE: RapidAPI only supports barcode lookups, not text search
+      // Skip RapidAPI and use direct scraping for text-based searches
 
-      // Fallback to individual scrapers if needed
-      if (results.length === 0) {
-        const stores = ['tesco', 'sainsburys', 'waitrose', 'ocado'];
+      // Direct scraping from individual stores
+      const stores = ['tesco', 'sainsburys', 'waitrose', 'ocado'];
 
-        for (const store of stores) {
-          try {
-            const storeResults = await this.scrapeStore(store, searchTerm);
-            results.push(...storeResults);
-            await this.sleep(1000); // Rate limiting between stores
+      for (const store of stores) {
+        try {
+          const storeResults = await this.scrapeStore(store, searchTerm);
+          results.push(...storeResults);
+          await this.sleep(1000); // Rate limiting between stores
           } catch (error) {
             console.error(`❌ Error scraping ${store}:`, error);
           }
